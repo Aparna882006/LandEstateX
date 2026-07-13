@@ -1,0 +1,51 @@
+﻿# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+backend/.env
+frontend/.env
+ai-service/.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Build folders
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# AI/ML Models
+*.pkl
+*.h5
+*.pt
+*.pth
+
+# Coverage
+coverage/
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE
+.idea/
+
+# Cache
+.cache/
