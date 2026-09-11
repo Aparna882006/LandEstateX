@@ -12,6 +12,15 @@ import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import DashboardPage from '../pages/buyer/DashboardPage';
 import ProtectedRoute from './ProtectedRoute';
+import RequireRole from "./RequireRole";
+
+import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
+import UsersPage from "../pages/admin/UserManagementPage";
+import PropertyManagementPage from "../pages/admin/PropertyManagementPage";
+import BrokerManagementPage from "../pages/admin/BrokerManagementPage";
+import AnalyticsPage from "../pages/admin/AnalyticsPage";
+import FraudDetectionPage from "../pages/admin/FraudDetectionPage";
+import SettingsPage from "../pages/admin/SettingsPage";
 
 const AppRoutes = () => {
   return (
