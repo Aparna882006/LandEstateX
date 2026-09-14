@@ -1,92 +1,125 @@
 /**
  * admin.routes.js
  * -----------------------------------------------------------------------
- * All routes here are admin-only. ASSUMPTIONS on middleware naming —
- * rename these imports to match your actual auth/role middleware exports:
- *   - middlewares/auth.middleware.js -> exports `verifyJWT`
- *   - middlewares/role.middleware.js -> exports `authorizeRoles(...roles)`
- *   - middlewares/validate.middleware.js -> exports `validate`
- *
- * Mount in index.routes.js with:
- *   import adminRoutes from "./admin.routes.js";
- *   router.use("/admin", adminRoutes);
- * -----------------------------------------------------------------------
+ * All routes here are admin-only.
  */
 
-import { Router } from "express";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { authorizeRoles } from "../middlewares/role.middleware.js";
-import { validate } from "../middlewares/validate.middleware.js";
-import {
+const { Router } = require('express');
+
+const { verifyJWT } = require('../middlewares/auth.middleware');
+const { restrictTo } = require('../middlewares/role.middleware');
+const validate = require('../middlewares/validate.middleware');
+
+const {
   getDashboardStats,
   getAllUsers,
   getUserById,
   updateUserStatus,
   updateUserRole,
   deleteUser,
-} from "../controllers/admin.controller.js";
-import {
+} = require('../controllers/admin.controller');
+
+const {
   getAllProperties,
   updatePropertyStatus,
   deleteProperty,
-} from "../controllers/adminProperty.controller.js";
-import {
+} = require('../controllers/adminProperty.controller');
+
+const {
   getUserGrowth,
   getRoleDistribution,
   getFraudFlags,
-} from "../controllers/adminAnalytics.controller.js";
-import {
+} = require('../controllers/adminAnalytics.controller');
+
+const {
   getSettings,
   updateSettings,
-} from "../controllers/adminSettings.controller.js";
-import {
+} = require('../controllers/adminSettings.controller');
+
+const {
   userIdParamValidator,
   updateUserStatusValidator,
   updateUserRoleValidator,
-} from "../validators/admin.validator.js";
+} = require('../validators/admin.validator');
 
 const router = Router();
 
 // Every route below requires a logged-in admin.
-router.use(verifyJWT, authorizeRoles("admin"));
+router.use(verifyJWT, restrictTo('admin'));
 
-router.get("/dashboard-stats", getDashboardStats);
+// Dashboard
+router.get('/dashboard-stats', getDashboardStats);
 
-router.get("/users", getAllUsers);
-router.get("/users/:userId", userIdParamValidator, validate, getUserById);
+// User management
+router.get('/users', getAllUsers);
+
+router.get(
+  '/users/:userId',
+  userIdParamValidator,
+  validate,
+  getUserById
+);
+
 router.patch(
-  "/users/:userId/status",
+  '/users/:userId/status',
   updateUserStatusValidator,
   validate,
   updateUserStatus
 );
+
 router.patch(
-  "/users/:userId/role",
+  '/users/:userId/role',
   updateUserRoleValidator,
   validate,
   updateUserRole
 );
-router.delete("/users/:userId", userIdParamValidator, validate, deleteUser);
 
-// --- Property moderation ---
-router.get("/properties", getAllProperties);
-router.patch("/properties/:propertyId/status", updatePropertyStatus);
-router.delete("/properties/:propertyId", deleteProperty);
+router.delete(
+  '/users/:userId',
+  userIdParamValidator,
+  validate,
+  deleteUser
+);
 
-// --- Broker management ---
-// Placeholder — Broker module (Prompt 8E) isn't built yet. Once it is,
-// mirror the property routes above against Broker.model.js: list, verify,
-// suspend, delete. No admin.controller functions to wire until then.
+// Property moderation
+router.get('/properties', getAllProperties);
 
-// --- Analytics / reports ---
-router.get("/analytics/user-growth", getUserGrowth);
-router.get("/analytics/role-distribution", getRoleDistribution);
+router.patch(
+  '/properties/:propertyId/status',
+  updatePropertyStatus
+);
 
-// --- Fraud detection ---
-router.get("/fraud/flags", getFraudFlags);
+router.delete(
+  '/properties/:propertyId',
+  deleteProperty
+);
 
-// --- Settings ---
-router.get("/settings", getSettings);
-router.patch("/settings", updateSettings);
+// Analytics
+router.get(
+  '/analytics/user-growth',
+  getUserGrowth
+);
 
-export default router;
+router.get(
+  '/analytics/role-distribution',
+  getRoleDistribution
+);
+
+// Fraud detection
+router.get(
+  '/fraud/flags',
+  getFraudFlags
+);
+
+// Settings
+router.get(
+  '/settings',
+  getSettings
+);
+
+router.patch(
+  '/settings',
+  updateSettings
+);
+
+module.exports = router;
