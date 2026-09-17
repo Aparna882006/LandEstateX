@@ -20,13 +20,13 @@ const {
 } = require('../validators/auth.validator');
 
 const validate = require('../middlewares/validate.middleware');
-const { protect } = require('../middlewares/auth.middleware');
+const { verifyJWT } = require('../middlewares/auth.middleware');
 
 router.post('/register', registerValidator, validate, register);
 router.post('/verify-email', verifyEmailValidator, validate, verifyEmail);
 router.post('/login', loginValidator, validate, login);
 router.post('/refresh-token', refreshToken);
-router.post('/logout', protect, logout);
+router.post('/logout', verifyJWT, logout);
 router.post('/forgot-password', forgotPasswordValidator, validate, forgotPassword);
 router.post('/reset-password', resetPasswordValidator, validate, resetPassword);
 

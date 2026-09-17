@@ -1,10 +1,13 @@
-const ApiError = require('../utils/apiError');
+const ApiError = require("../utils/apiError");
 
-// Usage: restrictTo('admin', 'broker')
+/**
+ * restrictTo(...roles)
+ * Usage: router.use(verifyJWT, restrictTo("broker", "admin"))
+ */
 const restrictTo = (...allowedRoles) => {
-  return (req, res, next) => {
+  return (req, _res, next) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
-      throw new ApiError(403, 'You do not have permission to perform this action');
+      return next(new ApiError(403, "You do not have permission to perform this action"));
     }
     next();
   };

@@ -17,8 +17,13 @@ const RegisterPage = () => {
     setServerError('');
     setLoading(true);
     try {
-      const { data } = await registerUser(formData);
-      navigate('/verify-email', { state: { email: data.data.email } });
+      await registerUser(formData);
+
+navigate('/verify-email', {
+  state: {
+    email: formData.email.trim(),
+  },
+});
     } catch (err) {
       setServerError(err.response?.data?.message || 'Something went wrong. Please try again.');
     } finally {

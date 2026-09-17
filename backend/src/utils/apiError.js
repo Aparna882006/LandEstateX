@@ -4,6 +4,7 @@ class ApiError extends Error {
     this.statusCode = statusCode;
     this.success = false;
     this.errors = errors;
+    Error.captureStackTrace(this, this.constructor);
   }
 }
 

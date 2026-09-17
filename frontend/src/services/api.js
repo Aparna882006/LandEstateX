@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
-  withCredentials: true, // sends the httpOnly refresh-token cookie
+  baseURL: '/api/v1',
+  withCredentials: true,
 });
 
 // Attach access token to every request
@@ -69,3 +69,6 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+console.log("API Base URL:", import.meta.env.VITE_API_BASE_URL);
+console.log("Axios Base URL:", api.defaults.baseURL);

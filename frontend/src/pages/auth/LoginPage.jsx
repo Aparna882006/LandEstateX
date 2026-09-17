@@ -20,8 +20,23 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const { data } = await loginUser(formData);
-      login(data.data.user, data.data.access_token);
-      navigate('/dashboard');
+
+const user = data.message.user;
+const accessToken = data.message.access_token;
+
+login(user, accessToken);
+
+if (user.role === 'broker') {
+  navigate('/broker/dashboard');
+} else if (user.role === 'seller') {
+  navigate('/dashboard');
+} else if (user.role === 'builder') {
+  navigate('/dashboard');
+} else if (user.role === 'investor') {
+  navigate('/dashboard');
+} else {
+  navigate('/dashboard');
+}
     } catch (err) {
       setServerError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {

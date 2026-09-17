@@ -51,12 +51,16 @@ const register = asyncHandler(async (req, res) => {
   return res
     .status(201)
     .json(
-      new ApiResponse(true, 'Account created. Please verify your email.', {
-        user_id: user._id,
-        email: user.email,
-        role: user.role,
-        is_verified: user.is_verified,
-      })
+      new ApiResponse(
+  201,
+  {
+    user_id: user._id,
+    email: user.email,
+    role: user.role,
+    is_verified: user.is_verified,
+  },
+  'Account created. Please verify your email.'
+)
     );
 });
 
@@ -95,7 +99,13 @@ const verifyEmail = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(true, 'Email verified successfully', { is_verified: true }));
+    .json(new ApiResponse(
+  200,
+  {
+    is_verified: true,
+  },
+  'Email verified successfully'
+));
 });
 
 // ─────────────────────────────────────────────
@@ -134,13 +144,17 @@ const login = asyncHandler(async (req, res) => {
 
   res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
 
-  return res.status(200).json(
-    new ApiResponse(true, 'Login successful', {
+ return res.status(200).json(
+  new ApiResponse(
+    200,
+    {
       user: user.toSafeObject(),
       access_token: accessToken,
       expires_in: 900,
-    })
-  );
+    },
+    'Login successful'
+  )
+);
 });
 
 // ─────────────────────────────────────────────
@@ -192,10 +206,14 @@ const refreshToken = asyncHandler(async (req, res) => {
   res.cookie('refreshToken', newRefreshToken, REFRESH_COOKIE_OPTIONS);
 
   return res.status(200).json(
-    new ApiResponse(true, 'Token refreshed', {
-      access_token: newAccessToken,
-      expires_in: 900,
-    })
+    new ApiResponse(
+  200,
+  {
+    access_token: newAccessToken,
+    expires_in: 900,
+  },
+  'Token refreshed'
+)
   );
 });
 
@@ -215,7 +233,7 @@ const logout = asyncHandler(async (req, res) => {
 
   res.clearCookie('refreshToken', REFRESH_COOKIE_OPTIONS);
 
-  return res.status(200).json(new ApiResponse(true, 'Logged out successfully'));
+  return res.status(200).json(new ApiResponse(200, null, 'Logged out successfully'));
 });
 
 // ─────────────────────────────────────────────
@@ -242,7 +260,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(true, 'If an account exists with this email, a reset link has been sent.')
+      new ApiResponse(200, null, 'If an account exists with this email, a reset link has been sent.')
     );
 });
 
@@ -274,7 +292,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(true, 'Password reset successful. Please log in with your new password.'));
+    .json(new ApiResponse(200, null, 'Password reset successful. Please log in with your new password.'));
 });
 
 module.exports = {

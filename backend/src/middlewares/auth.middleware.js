@@ -1,39 +1,27 @@
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
-const { verifyAccessToken } = require('../utils/jwt.util');
-const User = require('../models/User.model');
+const jwt = require("jsonwebtoken");
+const asyncHandler = require("../utils/asyncHandler");
+const ApiError = require("../utils/apiError");
+const User = require("../models/User.model");
 
-const protect = asyncHandler(async (req, res, next) => {
-  let token;
+/**
+ * verifyJWT
+ * Expects existing auth module's access token flow: Bearer token in Authorization header.
+ * Attaches req.user (Mongoose User doc, minus password/refresh fields).
+ */
+const verifyJWT = asyncHandler(async (req, _res, next) => {
+  const token =
+    req.cookies?.accessToken ||
+    req.header("Authorization")?.replace("Bearer ", "");
 
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
-  }
+  if (!token) throw new ApiError(401, "Unauthorized request - no token provided");
 
-  if (!token) {
-    throw new ApiError(401, 'Not authorized, no token provided');
-  }
+  const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+  const user = await User.findById(decoded._id).select("-password -refreshTokens");
 
-  let decoded;
-  try {
-    decoded = verifyAccessToken(token);
-  } catch (err) {
-    throw new ApiError(401, 'Not authorized, invalid or expired token');
-  }
+  if (!user) throw new ApiError(401, "Invalid access token");
 
-  const user = await User.findById(decoded.user_id);
-  if (!user) {
-    throw new ApiError(401, 'User belonging to this token no longer exists');
-  }
-
-  if (user.status === 'blocked') {
-    throw new ApiError(403, 'This account has been blocked');
-  }
-
-  // Attach user to request — never trust client-supplied user_id anywhere downstream
-  req.user = { id: user._id.toString(), role: user.role };
+  req.user = user;
   next();
 });
 
-module.exports = { protect };
+module.exports = { verifyJWT };

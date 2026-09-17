@@ -5,17 +5,22 @@ import PropertyListingPage from '../pages/public/PropertyListingPage';
 import PropertyDetailsPage from '../pages/buyer/PropertyDetailsPage';
 import WishlistPage from '../pages/buyer/WishlistPage';
 import ComparisonPage from '../pages/buyer/ComparisonPage';
+
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import EmailVerificationPage from '../pages/auth/EmailVerificationPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
+
 import DashboardPage from '../pages/buyer/DashboardPage';
+import BrokerDashboardPage from '../pages/broker/BrokerDashboardPage';
+
 import ProtectedRoute from './ProtectedRoute';
 
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* Public routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/properties" element={<PropertyListingPage />} />
       <Route path="/properties/:id" element={<PropertyDetailsPage />} />
@@ -25,10 +30,19 @@ const AppRoutes = () => {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      <Route element={<ProtectedRoute />}>
+      {/* Buyer routes */}
+      <Route element={<ProtectedRoute allowedRoles={['buyer']} />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/compare" element={<ComparisonPage />} />
+      </Route>
+
+      {/* Broker routes */}
+      <Route element={<ProtectedRoute allowedRoles={['broker']} />}>
+        <Route
+          path="/broker/dashboard"
+          element={<BrokerDashboardPage />}
+        />
       </Route>
     </Routes>
   );
