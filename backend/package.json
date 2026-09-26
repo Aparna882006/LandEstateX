@@ -4,10 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "start": "node src/server.js",
-  "dev": "nodemon",
-  "test": "jest --runInBand"
-},
+    "start": "node src/server.js",
+    "dev": "nodemon",
+    "reset-password": "node src/reset-password-cli.js",
+    "test": "jest --runInBand"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

@@ -2,6 +2,7 @@ const User = require('../models/User.model');
 const ApiResponse = require('../utils/apiResponse');
 const ApiError = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
+
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -25,18 +26,28 @@ const REFRESH_COOKIE_OPTIONS = {
 const register = asyncHandler(async (req, res) => {
   const { full_name, email, phone_number, password, role } = req.body;
 
-  const existingUser = await User.findOne({ $or: [{ email }, { phone_number }] });
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const existingUser = await User.findOne({
+    $or: [
+      { email: normalizedEmail },
+      { phone_number },
+    ],
+  });
+
   if (existingUser) {
-    // Generic message — do not reveal which field matched (prevents enumeration)
-    throw new ApiError(409, 'This email or phone number is already registered');
+    throw new ApiError(
+      409,
+      'This email or phone number is already registered'
+    );
   }
 
   const otp = generateOTP();
-  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
   const user = await User.create({
     full_name,
-    email,
+    email: normalizedEmail,
     phone_number,
     password,
     role,
@@ -44,20 +55,23 @@ const register = asyncHandler(async (req, res) => {
     email_verification_expires: otpExpiry,
   });
 
-  // TODO: send `otp` via email service (async, non-blocking) — 
-  // stubbed for now, log to console during development
-  console.log(`[DEV ONLY] Verification OTP for ${email}: ${otp}`);
+  // Development only
+  console.log(
+    `[DEV ONLY] Verification OTP for ${normalizedEmail}: ${otp}`
+  );
 
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(true, 'Account created. Please verify your email.', {
+  return res.status(201).json(
+    new ApiResponse(
+      true,
+      'Account created. Please verify your email.',
+      {
         user_id: user._id,
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
-      })
-    );
+      }
+    )
+  );
 });
 
 // ─────────────────────────────────────────────
@@ -67,7 +81,11 @@ const register = asyncHandler(async (req, res) => {
 const verifyEmail = asyncHandler(async (req, res) => {
   const { email, otp } = req.body;
 
-  const user = await User.findOne({ email }).select(
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const user = await User.findOne({
+    email: normalizedEmail,
+  }).select(
     '+email_verification_otp +email_verification_expires'
   );
 
@@ -82,6 +100,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
   if (
     !user.email_verification_otp ||
     user.email_verification_otp !== otp ||
+    !user.email_verification_expires ||
     user.email_verification_expires < new Date()
   ) {
     throw new ApiError(401, 'Incorrect or expired OTP');
@@ -89,13 +108,21 @@ const verifyEmail = asyncHandler(async (req, res) => {
 
   user.is_verified = true;
   user.status = 'active';
+
   user.email_verification_otp = undefined;
   user.email_verification_expires = undefined;
+
   await user.save();
 
-  return res
-    .status(200)
-    .json(new ApiResponse(true, 'Email verified successfully', { is_verified: true }));
+  return res.status(200).json(
+    new ApiResponse(
+      true,
+      'Email verified successfully',
+      {
+        is_verified: true,
+      }
+    )
+  );
 });
 
 // ─────────────────────────────────────────────
@@ -105,41 +132,61 @@ const verifyEmail = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { email_or_phone, password } = req.body;
 
+  const loginValue = email_or_phone.trim().toLowerCase();
+
   const user = await User.findOne({
-    $or: [{ email: email_or_phone }, { phone_number: email_or_phone }],
+    $or: [
+      { email: loginValue },
+      { phone_number: email_or_phone.trim() },
+    ],
   }).select('+password');
 
-  // Generic error for both "user not found" and "wrong password" — prevents enumeration
   if (!user || !(await user.comparePassword(password))) {
     throw new ApiError(401, 'Email or password is incorrect');
   }
 
   if (user.status === 'blocked') {
-    throw new ApiError(403, 'This account has been temporarily restricted');
+    throw new ApiError(
+      403,
+      'This account has been temporarily restricted'
+    );
   }
 
   if (!user.is_verified) {
-    throw new ApiError(403, 'Please verify your email before logging in');
+    throw new ApiError(
+      403,
+      'Please verify your email before logging in'
+    );
   }
 
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
 
-  // Store hashed refresh token server-side for revocation capability
   user.refresh_tokens.push({
     token_hash: hashToken(refreshToken),
-    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    expires_at: new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000
+    ),
   });
+
   await user.save();
 
-  res.cookie('refreshToken', refreshToken, REFRESH_COOKIE_OPTIONS);
+  res.cookie(
+    'refreshToken',
+    refreshToken,
+    REFRESH_COOKIE_OPTIONS
+  );
 
   return res.status(200).json(
-    new ApiResponse(true, 'Login successful', {
-      user: user.toSafeObject(),
-      access_token: accessToken,
-      expires_in: 900,
-    })
+    new ApiResponse(
+      true,
+      'Login successful',
+      {
+        user: user.toSafeObject(),
+        access_token: accessToken,
+        expires_in: 900,
+      }
+    )
   );
 });
 
@@ -148,54 +195,83 @@ const login = asyncHandler(async (req, res) => {
 // POST /api/v1/auth/refresh-token
 // ─────────────────────────────────────────────
 const refreshToken = asyncHandler(async (req, res) => {
-  const token = req.cookies?.refreshToken || req.body.refresh_token;
+  const token =
+    req.cookies?.refreshToken ||
+    req.body.refresh_token;
 
   if (!token) {
-    throw new ApiError(400, 'Refresh token is required');
+    throw new ApiError(
+      400,
+      'Refresh token is required'
+    );
   }
 
   let decoded;
+
   try {
     decoded = verifyRefreshToken(token);
   } catch (err) {
-    throw new ApiError(401, 'Refresh token invalid or expired');
+    throw new ApiError(
+      401,
+      'Refresh token invalid or expired'
+    );
   }
 
   const user = await User.findById(decoded.user_id);
+
   if (!user) {
     throw new ApiError(401, 'User not found');
   }
 
   const tokenHash = hashToken(token);
-  const storedToken = user.refresh_tokens.find((rt) => rt.token_hash === tokenHash);
+
+  const storedToken = user.refresh_tokens.find(
+    (rt) => rt.token_hash === tokenHash
+  );
 
   if (!storedToken) {
-    // Token not found in the revocation-aware store — treat as compromised, 
-    // wipe ALL refresh tokens for this user, forcing full re-login everywhere
     user.refresh_tokens = [];
+
     await user.save();
-    throw new ApiError(401, 'Refresh token invalid or has been revoked');
+
+    throw new ApiError(
+      401,
+      'Refresh token invalid or has been revoked'
+    );
   }
 
-  // Rotation: remove old token, issue a new one
-  user.refresh_tokens = user.refresh_tokens.filter((rt) => rt.token_hash !== tokenHash);
+  // Remove old refresh token
+  user.refresh_tokens = user.refresh_tokens.filter(
+    (rt) => rt.token_hash !== tokenHash
+  );
 
   const newAccessToken = generateAccessToken(user);
   const newRefreshToken = generateRefreshToken(user);
 
   user.refresh_tokens.push({
     token_hash: hashToken(newRefreshToken),
-    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    expires_at: new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000
+    ),
   });
+
   await user.save();
 
-  res.cookie('refreshToken', newRefreshToken, REFRESH_COOKIE_OPTIONS);
+  res.cookie(
+    'refreshToken',
+    newRefreshToken,
+    REFRESH_COOKIE_OPTIONS
+  );
 
   return res.status(200).json(
-    new ApiResponse(true, 'Token refreshed', {
-      access_token: newAccessToken,
-      expires_in: 900,
-    })
+    new ApiResponse(
+      true,
+      'Token refreshed',
+      {
+        access_token: newAccessToken,
+        expires_in: 900,
+      }
+    )
   );
 });
 
@@ -204,18 +280,36 @@ const refreshToken = asyncHandler(async (req, res) => {
 // POST /api/v1/auth/logout
 // ─────────────────────────────────────────────
 const logout = asyncHandler(async (req, res) => {
-  const token = req.cookies?.refreshToken || req.body.refresh_token;
+  const token =
+    req.cookies?.refreshToken ||
+    req.body.refresh_token;
 
   if (token) {
     const tokenHash = hashToken(token);
-    await User.findByIdAndUpdate(req.user.id, {
-      $pull: { refresh_tokens: { token_hash: tokenHash } },
-    });
+
+    await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        $pull: {
+          refresh_tokens: {
+            token_hash: tokenHash,
+          },
+        },
+      }
+    );
   }
 
-  res.clearCookie('refreshToken', REFRESH_COOKIE_OPTIONS);
+  res.clearCookie(
+    'refreshToken',
+    REFRESH_COOKIE_OPTIONS
+  );
 
-  return res.status(200).json(new ApiResponse(true, 'Logged out successfully'));
+  return res.status(200).json(
+    new ApiResponse(
+      true,
+      'Logged out successfully'
+    )
+  );
 });
 
 // ─────────────────────────────────────────────
@@ -225,25 +319,63 @@ const logout = asyncHandler(async (req, res) => {
 const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
-  const user = await User.findOne({ email });
+  const normalizedEmail = email.trim().toLowerCase();
 
-  // Always return the same response, regardless of whether the email 
-  // exists — prevents account enumeration
+  console.log('\n========================================');
+  console.log('[DEV] Forgot password request');
+  console.log('[DEV] Email:', normalizedEmail);
+
+  const user = await User.findOne({
+    email: normalizedEmail,
+  });
+
+  console.log('[DEV] User found:', !!user);
+
   if (user) {
     const resetToken = generateRandomToken();
-    user.password_reset_token = hashToken(resetToken);
-    user.password_reset_expires = new Date(Date.now() + 30 * 60 * 1000); // 30 min
+
+    user.password_reset_token =
+      hashToken(resetToken);
+
+    user.password_reset_expires = new Date(
+      Date.now() + 30 * 60 * 1000
+    );
+
     await user.save();
 
-    // TODO: send `resetToken` via email — stubbed for development
-    console.log(`[DEV ONLY] Password reset token for ${email}: ${resetToken}`);
+    // Development only
+    console.log('\n========================================');
+    console.log(
+      '[DEV ONLY] PASSWORD RESET TOKEN'
+    );
+    console.log(
+      'Email:',
+      normalizedEmail
+    );
+    console.log(
+      'Token:',
+      resetToken
+    );
+    console.log(
+      'Expires:',
+      user.password_reset_expires
+    );
+    console.log('========================================\n');
+  } else {
+    console.log(
+      '[DEV] No user found with this email.'
+    );
+    console.log('========================================\n');
   }
 
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(true, 'If an account exists with this email, a reset link has been sent.')
-    );
+  // Always return the same response
+  // so account existence is not revealed.
+  return res.status(200).json(
+    new ApiResponse(
+      true,
+      'If an account exists with this email, a reset link has been sent.'
+    )
+  );
 });
 
 // ─────────────────────────────────────────────
@@ -251,32 +383,80 @@ const forgotPassword = asyncHandler(async (req, res) => {
 // POST /api/v1/auth/reset-password
 // ─────────────────────────────────────────────
 const resetPassword = asyncHandler(async (req, res) => {
-  const { reset_token, new_password } = req.body;
+  const {
+    reset_token,
+    new_password,
+  } = req.body;
 
-  const tokenHash = hashToken(reset_token);
+  if (!reset_token) {
+    throw new ApiError(
+      400,
+      'Reset token is required'
+    );
+  }
+
+  if (!new_password) {
+    throw new ApiError(
+      400,
+      'New password is required'
+    );
+  }
+
+  if (new_password.length < 8) {
+    throw new ApiError(
+      400,
+      'Password must be at least 8 characters'
+    );
+  }
+
+  const tokenHash = hashToken(
+    reset_token.trim()
+  );
 
   const user = await User.findOne({
     password_reset_token: tokenHash,
-    password_reset_expires: { $gt: new Date() },
-  }).select('+password_reset_token +password_reset_expires');
+    password_reset_expires: {
+      $gt: new Date(),
+    },
+  }).select(
+    '+password_reset_token +password_reset_expires'
+  );
 
   if (!user) {
-    throw new ApiError(401, 'Invalid or expired reset token');
+    throw new ApiError(
+      401,
+      'Invalid or expired reset token'
+    );
   }
 
-  user.password = new_password; // pre-save hook will hash it
+  // The User model pre-save hook will hash
+  // the new password automatically.
+  user.password = new_password;
+
+  // Remove used reset token
   user.password_reset_token = undefined;
   user.password_reset_expires = undefined;
-  user.refresh_tokens = []; // revoke all sessions on password reset
+
+  // Revoke all existing sessions
+  user.refresh_tokens = [];
+
   await user.save();
 
-  // TODO: send confirmation email that password was changed
+  console.log(
+    `[DEV] Password successfully reset for ${user.email}`
+  );
 
-  return res
-    .status(200)
-    .json(new ApiResponse(true, 'Password reset successful. Please log in with your new password.'));
+  return res.status(200).json(
+    new ApiResponse(
+      true,
+      'Password reset successful. Please log in with your new password.'
+    )
+  );
 });
 
+// ─────────────────────────────────────────────
+// EXPORTS
+// ─────────────────────────────────────────────
 module.exports = {
   register,
   verifyEmail,

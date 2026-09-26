@@ -1,20 +1,67 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
-import { forgotPassword } from '../../services/auth.service';
 
 const ForgotPasswordPage = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (formData) => {
     setLoading(true);
+    setMessage('');
+
     try {
-      const { data } = await forgotPassword(formData);
-      setMessage(data.message);
-    } catch (err) {
-      setMessage('Something went wrong. Please try again.');
+      console.log('[FRONTEND] Sending forgot-password request...');
+      console.log('[FRONTEND] Email:', formData.email);
+
+      const response = await fetch(
+        'http://localhost:5000/api/v1/auth/forgot-password',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email.trim().toLowerCase(),
+          }),
+        }
+      );
+
+      console.log(
+        '[FRONTEND] Backend response status:',
+        response.status
+      );
+
+      const data = await response.json();
+
+      console.log('[FRONTEND] Backend response:', data);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || 'Something went wrong'
+        );
+      }
+
+      setMessage(
+        data.message ||
+          'If an account exists with this email, a reset link has been sent.'
+      );
+    } catch (error) {
+      console.error(
+        '[FRONTEND] Forgot password error:',
+        error
+      );
+
+      setMessage(
+        error.message ||
+          'Something went wrong. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -23,7 +70,11 @@ const ForgotPasswordPage = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-0 px-4">
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-sm">
-        <h1 className="mb-2 text-2xl font-semibold text-neutral-900">Forgot your password?</h1>
+
+        <h1 className="mb-2 text-2xl font-semibold text-neutral-900">
+          Forgot your password?
+        </h1>
+
         <p className="mb-6 text-sm text-neutral-500">
           Enter your email and we&apos;ll send you a reset link.
         </p>
@@ -34,15 +85,29 @@ const ForgotPasswordPage = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
           <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-900">Email</label>
+            <label className="mb-1 block text-sm font-medium text-neutral-900">
+              Email
+            </label>
+
             <input
               type="email"
+              placeholder="Enter your email"
               className="w-full rounded-md border border-neutral-200 px-3 py-2 focus:border-primary-700 focus:outline-none"
-              {...register('email', { required: 'Email is required' })}
+              {...register('email', {
+                required: 'Email is required',
+              })}
             />
-            {errors.email && <p className="mt-1 text-xs text-danger-600">{errors.email.message}</p>}
+
+            {errors.email && (
+              <p className="mt-1 text-xs text-danger-600">
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
           <button
@@ -55,10 +120,14 @@ const ForgotPasswordPage = () => {
         </form>
 
         <p className="mt-6 text-center text-sm text-neutral-500">
-          <Link to="/login" className="font-medium text-primary-700">
+          <Link
+            to="/login"
+            className="font-medium text-primary-700"
+          >
             Back to login
           </Link>
         </p>
+
       </div>
     </div>
   );
