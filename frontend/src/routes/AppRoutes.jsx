@@ -17,41 +17,122 @@ import DashboardPage from '../pages/buyer/DashboardPage';
 import ProtectedRoute from './ProtectedRoute';
 import RequireRole from './RequireRole';
 
+// Broker pages
+import BrokerDashboardPage from '../pages/broker/BrokerDashboardPage';
+import BrokerPropertyManagementPage from '../pages/broker/PropertyManagementPage';
+
+// Appointment Management is located in components/broker
+import AppointmentManagementPage from '../components/broker/AppointmentManagementPage';
+
 // Admin pages
-import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
-import UsersPage from "../pages/admin/UserManagementPage";
-import PropertyManagementPage from "../pages/admin/PropertyManagementPage";
-import BrokerManagementPage from "../pages/admin/BrokerManagementPage";
-import AnalyticsPage from "../pages/admin/AnalyticsPage";
-import FraudDetectionPage from "../pages/admin/FraudDetectionPage";
-import SettingsPage from "../pages/admin/SettingsPage";
+import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
+import UsersPage from '../pages/admin/UserManagementPage';
+import PropertyManagementPage from '../pages/admin/PropertyManagementPage';
+import BrokerManagementPage from '../pages/admin/BrokerManagementPage';
+import AnalyticsPage from '../pages/admin/AnalyticsPage';
+import FraudDetectionPage from '../pages/admin/FraudDetectionPage';
+import SettingsPage from '../pages/admin/SettingsPage';
 
 const AppRoutes = () => {
   return (
     <Routes>
 
-      {/* Public Routes */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/properties" element={<PropertyListingPage />} />
-      <Route path="/properties/:id" element={<PropertyDetailsPage />} />
+      {/* =========================
+          PUBLIC ROUTES
+      ========================== */}
 
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/verify-email" element={<EmailVerificationPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route
+        path="/"
+        element={<LandingPage />}
+      />
 
+      <Route
+        path="/properties"
+        element={<PropertyListingPage />}
+      />
 
-      {/* Protected Routes */}
+      <Route
+        path="/properties/:id"
+        element={<PropertyDetailsPage />}
+      />
+
+      <Route
+        path="/login"
+        element={<LoginPage />}
+      />
+
+      <Route
+        path="/register"
+        element={<RegisterPage />}
+      />
+
+      <Route
+        path="/verify-email"
+        element={<EmailVerificationPage />}
+      />
+
+      <Route
+        path="/forgot-password"
+        element={<ForgotPasswordPage />}
+      />
+
+      <Route
+        path="/reset-password"
+        element={<ResetPasswordPage />}
+      />
+
+      {/* =========================
+          PROTECTED ROUTES
+      ========================== */}
+
       <Route element={<ProtectedRoute />}>
 
-        {/* Normal User */}
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/wishlist" element={<WishlistPage />} />
-        <Route path="/compare" element={<ComparisonPage />} />
+        {/* =========================
+            NORMAL USER / BUYER ROUTES
+        ========================== */}
 
+        <Route
+          path="/dashboard"
+          element={<DashboardPage />}
+        />
 
-        {/* Admin Routes */}
+        <Route
+          path="/wishlist"
+          element={<WishlistPage />}
+        />
+
+        <Route
+          path="/compare"
+          element={<ComparisonPage />}
+        />
+
+        {/* =========================
+            BROKER ROUTES
+        ========================== */}
+
+        <Route element={<RequireRole role="broker" />}>
+
+          <Route
+            path="/broker/dashboard"
+            element={<BrokerDashboardPage />}
+          />
+
+          <Route
+            path="/broker/properties"
+            element={<BrokerPropertyManagementPage />}
+          />
+
+          <Route
+            path="/broker/appointments"
+            element={<AppointmentManagementPage />}
+          />
+
+        </Route>
+
+        {/* =========================
+            ADMIN ROUTES
+        ========================== */}
+
         <Route element={<RequireRole role="admin" />}>
 
           <Route
@@ -86,7 +167,7 @@ const AppRoutes = () => {
 
           <Route
             path="/admin/settings"
-            elemeIdnt={<SettingsPage />}
+            element={<SettingsPage />}
           />
 
         </Route>

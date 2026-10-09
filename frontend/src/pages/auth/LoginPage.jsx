@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
+
 import { loginUser } from '../../services/auth.service';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -25,11 +26,16 @@ const LoginPage = () => {
       const { data } = await loginUser(formData);
 
       // Save logged-in user and access token
-      login(data.data.user, data.data.access_token);
+      login(
+        data.data.user,
+        data.data.access_token
+      );
 
       // Redirect according to user role
       if (data.data.user.role === 'admin') {
         navigate('/admin');
+      } else if (data.data.user.role === 'broker') {
+        navigate('/broker/dashboard');
       } else {
         navigate('/dashboard');
       }
@@ -46,6 +52,7 @@ const LoginPage = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-0 px-4">
+
       <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-sm">
 
         <h1 className="mb-2 text-2xl font-semibold text-neutral-900">
@@ -62,7 +69,10 @@ const LoginPage = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
 
           {/* Email or Phone */}
           <div>
@@ -147,6 +157,7 @@ const LoginPage = () => {
         </p>
 
       </div>
+
     </div>
   );
 };
