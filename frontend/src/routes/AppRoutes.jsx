@@ -1,10 +1,16 @@
+
 import { Routes, Route } from 'react-router-dom';
 
 import LandingPage from '../pages/public/LandingPage';
 import PropertyListingPage from '../pages/public/PropertyListingPage';
+
 import PropertyDetailsPage from '../pages/buyer/PropertyDetailsPage';
 import WishlistPage from '../pages/buyer/WishlistPage';
 import ComparisonPage from '../pages/buyer/ComparisonPage';
+import DashboardPage from '../pages/buyer/DashboardPage';
+import MyAppointmentsPage from '../pages/buyer/MyAppointmentsPage';
+import LoanCalculatorPage from '../pages/buyer/LoanCalculatorPage';
+import SavedSearchesPage from '../pages/buyer/SavedSearchesPage';
 
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
@@ -12,16 +18,12 @@ import EmailVerificationPage from '../pages/auth/EmailVerificationPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 
-import DashboardPage from '../pages/buyer/DashboardPage';
-
 import ProtectedRoute from './ProtectedRoute';
 import RequireRole from './RequireRole';
 
 // Broker pages
 import BrokerDashboardPage from '../pages/broker/BrokerDashboardPage';
 import BrokerPropertyManagementPage from '../pages/broker/PropertyManagementPage';
-
-// Appointment Management is located in components/broker
 import AppointmentManagementPage from '../components/broker/AppointmentManagementPage';
 
 // Admin pages
@@ -36,10 +38,7 @@ import SettingsPage from '../pages/admin/SettingsPage';
 const AppRoutes = () => {
   return (
     <Routes>
-
-      {/* =========================
-          PUBLIC ROUTES
-      ========================== */}
+      {/* PUBLIC ROUTES */}
 
       <Route
         path="/"
@@ -81,37 +80,46 @@ const AppRoutes = () => {
         element={<ResetPasswordPage />}
       />
 
-      {/* =========================
-          PROTECTED ROUTES
-      ========================== */}
+      {/* PROTECTED ROUTES */}
 
       <Route element={<ProtectedRoute />}>
+        {/* BUYER ROUTES */}
 
-        {/* =========================
-            NORMAL USER / BUYER ROUTES
-        ========================== */}
+        <Route element={<RequireRole role="buyer" />}>
+          <Route
+            path="/dashboard"
+            element={<DashboardPage />}
+          />
 
-        <Route
-          path="/dashboard"
-          element={<DashboardPage />}
-        />
+          <Route
+            path="/wishlist"
+            element={<WishlistPage />}
+          />
 
-        <Route
-          path="/wishlist"
-          element={<WishlistPage />}
-        />
+          <Route
+            path="/compare"
+            element={<ComparisonPage />}
+          />
 
-        <Route
-          path="/compare"
-          element={<ComparisonPage />}
-        />
+          <Route
+            path="/my-appointments"
+            element={<MyAppointmentsPage />}
+          />
 
-        {/* =========================
-            BROKER ROUTES
-        ========================== */}
+          <Route
+            path="/loan-calculator"
+            element={<LoanCalculatorPage />}
+          />
+
+          <Route
+            path="/saved-searches"
+            element={<SavedSearchesPage />}
+          />
+        </Route>
+
+        {/* BROKER ROUTES */}
 
         <Route element={<RequireRole role="broker" />}>
-
           <Route
             path="/broker/dashboard"
             element={<BrokerDashboardPage />}
@@ -126,15 +134,11 @@ const AppRoutes = () => {
             path="/broker/appointments"
             element={<AppointmentManagementPage />}
           />
-
         </Route>
 
-        {/* =========================
-            ADMIN ROUTES
-        ========================== */}
+        {/* ADMIN ROUTES */}
 
         <Route element={<RequireRole role="admin" />}>
-
           <Route
             path="/admin"
             element={<AdminDashboardPage />}
@@ -169,11 +173,8 @@ const AppRoutes = () => {
             path="/admin/settings"
             element={<SettingsPage />}
           />
-
         </Route>
-
       </Route>
-
     </Routes>
   );
 };

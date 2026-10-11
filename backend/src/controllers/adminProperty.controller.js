@@ -1,3 +1,4 @@
+
 /**
  * adminProperty.controller.js
  * Admin-side property moderation
@@ -10,8 +11,8 @@ const Property = require('../models/Property.model');
 
 // GET /api/v1/admin/properties
 const getAllProperties = asyncHandler(async (req, res) => {
-  const page = Math.max(parseInt(req.query.page) || 1, 1);
-  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
   const skip = (page - 1) * limit;
 
   const filter = {};
@@ -29,8 +30,11 @@ const getAllProperties = asyncHandler(async (req, res) => {
 
   const [properties, total] = await Promise.all([
     Property.find(filter)
-      .populate('listedBy', 'name email role')
-      .sort({ createdAt: -1 })
+      .populate({
+        path: 'owner_id',
+        select: 'name full_name email role',
+      })
+      .sort({ created_at: -1 })
       .skip(skip)
       .limit(limit),
 
@@ -59,12 +63,7 @@ const updatePropertyStatus = asyncHandler(async (req, res) => {
   const { propertyId } = req.params;
   const { status } = req.body;
 
-  const allowed = [
-    'pending',
-    'approved',
-    'rejected',
-    'flagged',
-  ];
+  const allowed = ['pending', 'approved', 'rejected', 'flagged'];
 
   if (!allowed.includes(status)) {
     throw new ApiError(
@@ -86,14 +85,10 @@ const updatePropertyStatus = asyncHandler(async (req, res) => {
   });
 
   return res.status(200).json(
-    new ApiResponse(
-      true,
-      `Property marked ${status}`,
-      {
-        propertyId,
-        status,
-      }
-    )
+    new ApiResponse(true, `Property marked ${status}`, {
+      propertyId,
+      status,
+    })
   );
 });
 
@@ -108,13 +103,9 @@ const deleteProperty = asyncHandler(async (req, res) => {
   }
 
   return res.status(200).json(
-    new ApiResponse(
-      true,
-      'Property deleted successfully',
-      {
-        propertyId,
-      }
-    )
+    new ApiResponse(true, 'Property deleted successfully', {
+      propertyId,
+    })
   );
 });
 

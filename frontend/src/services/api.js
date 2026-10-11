@@ -51,7 +51,7 @@ api.interceptors.response.use(
 
     const url = originalRequest.url || '';
 
-    // Never attempt refresh for login or refresh requests.
+    // Do not attempt token refresh for login or refresh requests.
     if (
       /\/auth\/login\/?$/.test(url) ||
       /\/auth\/refresh-token\/?$/.test(url)
@@ -123,4 +123,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
