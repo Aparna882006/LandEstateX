@@ -1,7 +1,15 @@
+
 const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema(
   {
+    property_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Property',
+      required: true,
+      index: true,
+    },
+
     broker_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -13,6 +21,7 @@ const reviewSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+      index: true,
     },
 
     rating: {
@@ -37,9 +46,12 @@ const reviewSchema = new mongoose.Schema(
   }
 );
 
+// One buyer can review a particular property only once.
+// Different buyers can review the same property.
+// The same buyer can review different properties.
 reviewSchema.index(
   {
-    broker_id: 1,
+    property_id: 1,
     reviewer_id: 1,
   },
   {

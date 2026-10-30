@@ -1,94 +1,178 @@
 
 /**
  * adminProperty.controller.js
- * Admin-side property moderation
+ * Admin property management controller
  */
 
-const asyncHandler = require('../utils/asyncHandler');
-const ApiResponse = require('../utils/apiResponse');
-const ApiError = require('../utils/apiError');
-const Property = require('../models/Property.model');
+const mongoose = require("mongoose");
+const asyncHandler = require("../utils/asyncHandler");
+const ApiResponse = require("../utils/apiResponse");
+const ApiError = require("../utils/apiError");
+const Property = require("../models/Property.model");
 
 // GET /api/v1/admin/properties
 const getAllProperties = asyncHandler(async (req, res) => {
-  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
-  const skip = (page - 1) * limit;
+  res.set("Cache-Control", "no-store");
 
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+
+  const limit = Math.min(
+    Math.max(parseInt(req.query.limit, 10) || 20, 1),
+    100
+  );
+
+  const skip = (page - 1) * limit;
   const filter = {};
 
+  // Optional status filter
   if (req.query.status) {
+    const allowedStatuses = [
+      "pending",
+      "approved",
+      "rejected",
+      "sold",
+      "deleted",
+      "flagged",
+    ];
+
+    if (!allowedStatuses.includes(req.query.status)) {
+      throw new ApiError(400, "Invalid property status filter");
+    }
+
     filter.status = req.query.status;
   }
 
+  // Optional keyword search
   if (req.query.search) {
-    filter.title = {
-      $regex: req.query.search.trim(),
-      $options: 'i',
-    };
+    const search = String(req.query.search).trim();
+
+    if (search) {
+      const escapedSearch = search.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+      );
+
+      filter.$or = [
+        { title: { $regex: escapedSearch, $options: "i" } },
+        {
+          description: {
+            $regex: escapedSearch,
+            $options: "i",
+          },
+        },
+        {
+          "location.address": {
+            $regex: escapedSearch,
+            $options: "i",
+          },
+        },
+        {
+          "location.city": {
+            $regex: escapedSearch,
+            $options: "i",
+          },
+        },
+      ];
+    }
   }
 
   const [properties, total] = await Promise.all([
     Property.find(filter)
-      .populate({
-        path: 'owner_id',
-        select: 'name full_name email role',
-      })
+      .populate("owner_id", "full_name email phone_number role")
       .sort({ created_at: -1 })
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
 
     Property.countDocuments(filter),
   ]);
 
   return res.status(200).json(
-    new ApiResponse(
-      true,
-      'Properties fetched successfully',
-      {
-        properties,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
-      }
-    )
+    new ApiResponse(true, "Properties fetched successfully", {
+      properties,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    })
   );
 });
 
 // PATCH /api/v1/admin/properties/:propertyId/status
 const updatePropertyStatus = asyncHandler(async (req, res) => {
   const { propertyId } = req.params;
-  const { status } = req.body;
+  const { status, rejection_reason } = req.body;
 
-  const allowed = ['pending', 'approved', 'rejected', 'flagged'];
+  if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+    throw new ApiError(400, "Invalid property ID");
+  }
 
-  if (!allowed.includes(status)) {
+  const allowedStatuses = [
+    "pending",
+    "approved",
+    "rejected",
+    "flagged",
+  ];
+
+  if (!allowedStatuses.includes(status)) {
     throw new ApiError(
       400,
-      `Status must be one of: ${allowed.join(', ')}`
+      `Status must be one of: ${allowedStatuses.join(", ")}`
     );
   }
 
-  const property = await Property.findById(propertyId);
+  let rejectionReason = null;
 
-  if (!property) {
-    throw new ApiError(404, 'Property not found');
+  if (status === "rejected") {
+    rejectionReason =
+      typeof rejection_reason === "string"
+        ? rejection_reason.trim()
+        : "";
+
+    if (!rejectionReason) {
+      throw new ApiError(
+        400,
+        "A rejection reason is required when rejecting a property"
+      );
+    }
+
+    if (rejectionReason.length > 1000) {
+      throw new ApiError(
+        400,
+        "Rejection reason cannot exceed 1000 characters"
+      );
+    }
   }
 
-  property.status = status;
+  const update = {
+    status,
+    rejection_reason: status === "rejected" ? rejectionReason : null,
+    is_fraud_flagged: status === "flagged",
+  };
 
-  await property.save({
-    validateBeforeSave: false,
-  });
+  const property = await Property.findByIdAndUpdate(
+    propertyId,
+    { $set: update },
+    {
+      new: true,
+      runValidators: true,
+    }
+  )
+    .populate("owner_id", "full_name email phone_number role")
+    .lean();
+
+  if (!property) {
+    throw new ApiError(404, "Property not found");
+  }
 
   return res.status(200).json(
-    new ApiResponse(true, `Property marked ${status}`, {
-      propertyId,
-      status,
-    })
+    new ApiResponse(
+      true,
+      `Property ${status} successfully`,
+      property
+    )
   );
 });
 
@@ -96,15 +180,19 @@ const updatePropertyStatus = asyncHandler(async (req, res) => {
 const deleteProperty = asyncHandler(async (req, res) => {
   const { propertyId } = req.params;
 
+  if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+    throw new ApiError(400, "Invalid property ID");
+  }
+
   const property = await Property.findByIdAndDelete(propertyId);
 
   if (!property) {
-    throw new ApiError(404, 'Property not found');
+    throw new ApiError(404, "Property not found");
   }
 
   return res.status(200).json(
-    new ApiResponse(true, 'Property deleted successfully', {
-      propertyId,
+    new ApiResponse(true, "Property deleted successfully", {
+      propertyId: property._id,
     })
   );
 });

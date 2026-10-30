@@ -1,0 +1,28 @@
+
+property_type,listing_type,area_sqft,bedrooms,bathrooms,city,locality,price
+apartment,sale,800,2,1,Kanpur,Kalyanpur,2800000
+apartment,sale,1200,2,2,Kanpur,Kalyanpur,4200000
+apartment,sale,1500,3,2,Kanpur,Swaroop Nagar,5800000
+apartment,sale,1800,3,3,Kanpur,Civil Lines,7500000
+apartment,sale,1000,2,2,Lucknow,Gomti Nagar,4500000
+apartment,sale,1600,3,2,Lucknow,Indira Nagar,6500000
+villa,sale,1800,3,2,Kanpur,Kalyanpur,8500000
+villa,sale,2500,4,3,Kanpur,Civil Lines,13500000
+villa,sale,3000,4,4,Kanpur,Swaroop Nagar,17000000
+villa,sale,2200,3,3,Lucknow,Gomti Nagar,12000000
+plot,sale,1000,0,0,Kanpur,Panki,1800000
+plot,sale,1500,0,0,Kanpur,Kalyanpur,3000000
+plot,sale,2400,0,0,Kanpur,Civil Lines,6000000
+plot,sale,1200,0,0,Lucknow,Aliganj,2500000
+commercial,sale,800,0,1,Kanpur,Kakadeo,4500000
+commercial,sale,1500,0,2,Kanpur,Civil Lines,9500000
+commercial,sale,1000,0,1,Lucknow,Gomti Nagar,6000000
+apartment,rent,800,2,1,Kanpur,Kakadeo,10000
+apartment,rent,1200,2,2,Kanpur,Swaroop Nagar,16000
+apartment,rent,1500,3,2,Kanpur,Civil Lines,22000
+apartment,rent,1000,2,1,Lucknow,Aliganj,12000
+villa,rent,1800,3,2,Kanpur,Kalyanpur,28000
+villa,rent,2500,4,3,Kanpur,Civil Lines,45000
+commercial,rent,800,0,1,Kanpur,Kakadeo,25000
+commercial,rent,1500,0,2,Kanpur,Civil Lines,50000
+plot,rent,1000,0,0,Kanpur,Panki,8000

@@ -25,6 +25,7 @@ import RequireRole from './RequireRole';
 import BrokerDashboardPage from '../pages/broker/BrokerDashboardPage';
 import BrokerPropertyManagementPage from '../pages/broker/PropertyManagementPage';
 import AppointmentManagementPage from '../components/broker/AppointmentManagementPage';
+import LeadsPage from '../pages/broker/LeadsPage';
 
 // Admin pages
 import AdminDashboardPage from '../pages/admin/AdminDashboardPage';
@@ -35,15 +36,14 @@ import AnalyticsPage from '../pages/admin/AnalyticsPage';
 import FraudDetectionPage from '../pages/admin/FraudDetectionPage';
 import SettingsPage from '../pages/admin/SettingsPage';
 
+import PricePredictionPage from '../pages/buyer/PricePredictionPage';
+
 const AppRoutes = () => {
   return (
     <Routes>
       {/* PUBLIC ROUTES */}
 
-      <Route
-        path="/"
-        element={<LandingPage />}
-      />
+      <Route path="/" element={<LandingPage />} />
 
       <Route
         path="/properties"
@@ -55,15 +55,11 @@ const AppRoutes = () => {
         element={<PropertyDetailsPage />}
       />
 
-      <Route
-        path="/login"
-        element={<LoginPage />}
-      />
+      {/* AUTH ROUTES */}
 
-      <Route
-        path="/register"
-        element={<RegisterPage />}
-      />
+      <Route path="/login" element={<LoginPage />} />
+
+      <Route path="/register" element={<RegisterPage />} />
 
       <Route
         path="/verify-email"
@@ -117,6 +113,11 @@ const AppRoutes = () => {
           />
         </Route>
 
+        <Route
+        path="/price-prediction"
+        element={<PricePredictionPage />}
+        />
+
         {/* BROKER ROUTES */}
 
         <Route element={<RequireRole role="broker" />}>
@@ -133,6 +134,11 @@ const AppRoutes = () => {
           <Route
             path="/broker/appointments"
             element={<AppointmentManagementPage />}
+          />
+
+          <Route
+            path="/broker/leads"
+            element={<LeadsPage />}
           />
         </Route>
 

@@ -1,18 +1,26 @@
 
+import PricePredictionCard from '../../components/ai/PricePredictionCard';
+import PriceTrendPanel from '../../components/ai/PriceTrendPanel';
 import { useEffect, useState } from 'react';
+
 import { Link, useParams } from 'react-router-dom';
+
 import {
   FiHeart,
   FiMapPin,
   FiArrowLeft,
   FiHome,
   FiMaximize,
+  FiPhone,
+  FiStar,
+  FiUser,
 } from 'react-icons/fi';
 
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
+
 import { useAuth } from '../../hooks/useAuth';
 
 import {
@@ -24,6 +32,11 @@ import {
 import { getPropertyById } from '../../services/property.service';
 import { createAppointment } from '../../services/appointment.service';
 
+import {
+  createReview,
+  getBrokerReviews,
+} from '../../services/review.service';
+
 const PropertyDetailsPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
@@ -31,6 +44,7 @@ const PropertyDetailsPage = () => {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
   const [wishlisted, setWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
@@ -44,6 +58,18 @@ const PropertyDetailsPage = () => {
   const [bookingMessage, setBookingMessage] = useState('');
   const [bookingError, setBookingError] = useState('');
 
+  // Broker review state
+  const [reviews, setReviews] = useState([]);
+  const [averageRating, setAverageRating] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState('');
+  const [reviewError, setReviewError] = useState('');
+
+  // Load property details
   useEffect(() => {
     let cancelled = false;
 
@@ -76,13 +102,16 @@ const PropertyDetailsPage = () => {
       }
     };
 
-    if (id) loadProperty();
+    if (id) {
+      loadProperty();
+    }
 
     return () => {
       cancelled = true;
     };
   }, [id]);
 
+  // Check wishlist
   useEffect(() => {
     let cancelled = false;
 
@@ -107,7 +136,9 @@ const PropertyDetailsPage = () => {
           return String(propertyId) === String(id);
         });
 
-        if (!cancelled) setWishlisted(found);
+        if (!cancelled) {
+          setWishlisted(found);
+        }
       } catch (err) {
         console.error('Could not check wishlist:', err);
       }
@@ -120,6 +151,145 @@ const PropertyDetailsPage = () => {
     };
   }, [user, id]);
 
+  // Property owner/broker information
+  const owner = property?.owner_id;
+
+  const ownerId =
+    typeof owner === 'object' && owner
+      ? owner._id || owner.id
+      : owner;
+
+  const isBroker =
+    typeof owner === 'object' &&
+    owner !== null &&
+    owner.role === 'broker';
+
+  const brokerName =
+    typeof owner === 'object' && owner
+      ? owner.full_name || 'Property Broker'
+      : 'Property Broker';
+
+  const brokerPhone =
+    typeof owner === 'object' && owner
+      ? owner.phone_number || ''
+      : '';
+
+  // Fetch broker reviews
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadReviews = async () => {
+      if (!ownerId || !isBroker) {
+        setReviews([]);
+        setAverageRating(0);
+        setReviewCount(0);
+        return;
+      }
+
+      setReviewsLoading(true);
+
+      try {
+        const response = await getBrokerReviews(ownerId);
+        const result = response?.data?.data;
+
+        if (cancelled) return;
+
+        setReviews(result?.reviews || []);
+        setAverageRating(Number(result?.average_rating) || 0);
+        setReviewCount(
+          Number(result?.review_count ?? result?.reviews?.length) || 0
+        );
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Could not load broker reviews:', err);
+        }
+      } finally {
+        if (!cancelled) {
+          setReviewsLoading(false);
+        }
+      }
+    };
+
+    loadReviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerId, isBroker]);
+
+  const refreshReviews = async () => {
+    if (!ownerId) return;
+
+    const response = await getBrokerReviews(ownerId);
+    const result = response?.data?.data;
+
+    setReviews(result?.reviews || []);
+    setAverageRating(Number(result?.average_rating) || 0);
+    setReviewCount(
+      Number(result?.review_count ?? result?.reviews?.length) || 0
+    );
+  };
+
+  const handleReviewSubmit = async (event) => {
+    event.preventDefault();
+
+    setReviewError('');
+    setReviewMessage('');
+
+    if (!user) {
+      setReviewError('Please log in as a buyer to submit a review.');
+      return;
+    }
+
+    if (user.role !== 'buyer') {
+      setReviewError('Only buyer accounts can submit broker reviews.');
+      return;
+    }
+
+    if (!property?._id || !ownerId || !isBroker) {
+      setReviewError('Property or broker information is missing.');
+      return;
+    }
+
+    if (reviewSubmitting) return;
+
+    setReviewSubmitting(true);
+
+    try {
+      const payload = {
+        property_id: property._id || id,
+        broker_id: ownerId,
+        rating: Number(reviewRating),
+        comment: reviewComment.trim(),
+      };
+
+      const response = await createReview(payload);
+
+      setReviewMessage('Your review was submitted successfully.');
+      setReviewComment('');
+
+      try {
+        await refreshReviews();
+      } catch (refreshErr) {
+        console.error(
+          'Review saved, but refreshing the list failed:',
+          refreshErr
+        );
+      }
+    } catch (err) {
+      console.error('Review submission failed:', err);
+
+      setReviewError(
+        err.response?.data?.message ||
+          err.message ||
+          'Unable to submit your review. Please try again.'
+      );
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  // Wishlist handler
   const handleWishlist = async () => {
     if (!user) {
       window.alert('Please log in to save this property.');
@@ -129,6 +299,7 @@ const PropertyDetailsPage = () => {
     if (wishlistLoading) return;
 
     const previous = wishlisted;
+
     setWishlistLoading(true);
     setWishlisted(!previous);
 
@@ -140,6 +311,7 @@ const PropertyDetailsPage = () => {
       }
     } catch (err) {
       setWishlisted(previous);
+
       window.alert(
         err.response?.data?.message ||
           'Could not update your wishlist. Please try again.'
@@ -149,6 +321,7 @@ const PropertyDetailsPage = () => {
     }
   };
 
+  // Appointment handler
   const handleBookVisit = async (event) => {
     event.preventDefault();
 
@@ -167,7 +340,6 @@ const PropertyDetailsPage = () => {
       return;
     }
 
-    // Interpret the selected time in the visitor's local timezone.
     const scheduledAt = new Date(`${visitDate}T${visitTime}`);
 
     if (
@@ -207,22 +379,27 @@ const PropertyDetailsPage = () => {
     }
   };
 
+  // Loading state
   if (loading) {
     return (
       <>
         <Navbar />
+
         <main className="mx-auto min-h-screen max-w-7xl px-6 pb-20 pt-28">
           <Loader count={1} />
         </main>
+
         <Footer />
       </>
     );
   }
 
+  // Error state
   if (error || !property) {
     return (
       <>
         <Navbar />
+
         <main className="mx-auto min-h-screen max-w-7xl px-6 pb-20 pt-28">
           <Link
             to="/properties"
@@ -251,16 +428,18 @@ const PropertyDetailsPage = () => {
             </div>
           </div>
         </main>
+
         <Footer />
       </>
     );
   }
 
+  // Property presentation data
   const images =
     property.images
-      ?.map((image) => (
+      ?.map((image) =>
         typeof image === 'string' ? image : image.url
-      ))
+      )
       .filter(Boolean) || [];
 
   if (images.length === 0 && property.image) {
@@ -281,6 +460,39 @@ const PropertyDetailsPage = () => {
   const price = Number(property.price) || 0;
   const minDate = new Date().toLocaleDateString('en-CA');
 
+  // Normalize market filters using the current property
+  const propertyCity =
+    property.city ||
+    property.location?.city ||
+    'Kanpur';
+
+  const propertyLocality =
+    property.locality ||
+    property.location?.locality ||
+    '';
+
+  const propertyType = String(
+    property.property_type || property.type || 'apartment'
+  ).toLowerCase();
+
+  const listingType = String(
+    property.listing_type || property.purpose || 'sale'
+  ).toLowerCase();
+
+  const formatDate = (dateValue) => {
+    if (!dateValue) return '';
+
+    const date = new Date(dateValue);
+
+    return Number.isNaN(date.getTime())
+      ? ''
+      : date.toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        });
+  };
+
   return (
     <div className="min-h-screen bg-neutral-50">
       <Navbar />
@@ -295,6 +507,7 @@ const PropertyDetailsPage = () => {
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <section className="lg:col-span-2">
+            {/* Property images */}
             <div className="overflow-hidden rounded-xl bg-white shadow-sm">
               {images.length > 0 ? (
                 <>
@@ -334,6 +547,7 @@ const PropertyDetailsPage = () => {
               )}
             </div>
 
+            {/* Property information */}
             <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -360,6 +574,7 @@ const PropertyDetailsPage = () => {
                         : 'text-neutral-700'
                     }
                   />
+
                   {wishlisted ? 'Saved' : 'Save Property'}
                 </button>
               </div>
@@ -385,28 +600,282 @@ const PropertyDetailsPage = () => {
 
                 <div>
                   <FiHome className="mb-2 text-neutral-500" />
-                  <p className="text-sm text-neutral-500">
-                    Property Type
-                  </p>
+                  <p className="text-sm text-neutral-500">Property Type</p>
                   <p className="font-medium">
                     {property.property_type || property.type || '—'}
                   </p>
                 </div>
               </div>
 
-              <h2 className="mt-6 text-lg font-semibold">
-                Description
-              </h2>
+              <h2 className="mt-6 text-lg font-semibold">Description</h2>
+
               <p className="mt-3 whitespace-pre-line leading-7 text-neutral-600">
                 {property.description ||
                   'No description has been provided.'}
               </p>
             </div>
+
+            {/* AI Property Price Prediction */}
+            <section className="mt-6 rounded-xl bg-white p-6 shadow-sm">
+              <div className="mb-5">
+                <h2 className="text-xl font-semibold text-neutral-900">
+                  AI Property Price Prediction
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-neutral-600">
+                  Estimate this property's price using its details and location.
+                  You can review or edit the values before requesting a prediction.
+                </p>
+              </div>
+
+              <PricePredictionCard
+                key={String(property._id || id)}
+                initialData={{
+                  property_type: propertyType,
+                  listing_type: listingType,
+                  area_sqft:
+                    Number(property.area_sqft || property.area) || 1500,
+                  bedrooms:
+                    Number(property.bedrooms || property.bhk) || 3,
+                  bathrooms: Number(property.bathrooms) || 2,
+                  city: propertyCity,
+                  locality:
+                    property.locality ||
+                    property.location?.locality ||
+                    property.location?.address ||
+                    '',
+                }}
+                listedPrice={price}
+              />
+            </section>
+
+            {/* Live property market statistics */}
+            <section className="mt-6 rounded-xl bg-white p-6 shadow-sm">
+              <PriceTrendPanel
+                key={String(property._id || id)}
+                listedPrice={price}
+                city={propertyCity}
+                locality={propertyLocality}
+                propertyType={propertyType}
+                listingType={listingType}
+              />
+            </section>
+
+            {/* Broker reviews */}
+            {isBroker && (
+              <section className="mt-6 rounded-xl bg-white p-6 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-semibold text-neutral-900">
+                      Broker Reviews
+                    </h2>
+
+                    <p className="mt-1 text-sm text-neutral-500">
+                      Share your experience with {brokerName}.
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-amber-50 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <FiStar className="fill-amber-400 text-amber-500" />
+
+                      <span className="text-xl font-bold text-neutral-900">
+                        {averageRating.toFixed(1)}
+                      </span>
+
+                      <span className="text-sm text-neutral-500">/ 5</span>
+                    </div>
+
+                    <p className="mt-1 text-xs text-neutral-600">
+                      {reviewCount}{' '}
+                      {reviewCount === 1 ? 'review' : 'reviews'}
+                    </p>
+                  </div>
+                </div>
+
+                {reviewsLoading ? (
+                  <p className="mt-5 text-sm text-neutral-500">
+                    Loading reviews...
+                  </p>
+                ) : reviews.length === 0 ? (
+                  <p className="mt-5 rounded-lg bg-neutral-50 p-4 text-sm text-neutral-600">
+                    No reviews yet. Be the first to review this broker.
+                  </p>
+                ) : (
+                  <div className="mt-5 space-y-4">
+                    {reviews.map((review) => (
+                      <article
+                        key={review._id}
+                        className="border-b border-neutral-100 pb-4 last:border-0"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+                              <FiUser className="text-neutral-500" />
+                            </div>
+
+                            <div>
+                              <p className="font-medium text-neutral-900">
+                                {review.reviewer_id?.full_name || 'Buyer'}
+                              </p>
+
+                              <p className="text-xs text-neutral-500">
+                                {formatDate(
+                                  review.created_at || review.createdAt
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div
+                            className="flex items-center gap-1"
+                            aria-label={`${review.rating} out of 5 stars`}
+                          >
+                            {Array.from({ length: 5 }, (_, index) => (
+                              <FiStar
+                                key={index}
+                                size={15}
+                                className={
+                                  index < Number(review.rating)
+                                    ? 'fill-amber-400 text-amber-500'
+                                    : 'text-neutral-300'
+                                }
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {review.comment && (
+                          <p className="mt-3 whitespace-pre-line text-sm leading-6 text-neutral-600">
+                            {review.comment}
+                          </p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-6 border-t border-neutral-100 pt-6">
+                  <h3 className="text-lg font-semibold text-neutral-900">
+                    Write a Review
+                  </h3>
+
+                  {!user ? (
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Please{' '}
+                      <Link
+                        to="/login"
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        log in
+                      </Link>{' '}
+                      as a buyer to submit a review.
+                    </p>
+                  ) : user.role !== 'buyer' ? (
+                    <p className="mt-2 text-sm text-neutral-600">
+                      Only buyer accounts can submit reviews.
+                    </p>
+                  ) : (
+                    <form
+                      onSubmit={handleReviewSubmit}
+                      className="mt-4 space-y-4"
+                    >
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-neutral-700">
+                          Your rating
+                        </label>
+
+                        <div className="flex items-center gap-2">
+                          {[1, 2, 3, 4, 5].map((rating) => (
+                            <button
+                              key={rating}
+                              type="button"
+                              onClick={() => setReviewRating(rating)}
+                              aria-label={`Rate ${rating} out of 5 stars`}
+                              aria-pressed={reviewRating === rating}
+                              className="rounded p-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <FiStar
+                                size={28}
+                                className={
+                                  rating <= reviewRating
+                                    ? 'fill-amber-400 text-amber-500'
+                                    : 'text-neutral-300'
+                                }
+                              />
+                            </button>
+                          ))}
+
+                          <span className="ml-2 text-sm text-neutral-600">
+                            {reviewRating}/5
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="broker-review"
+                          className="mb-2 block text-sm font-medium text-neutral-700"
+                        >
+                          Comment (optional)
+                        </label>
+
+                        <textarea
+                          id="broker-review"
+                          rows={4}
+                          maxLength={1000}
+                          value={reviewComment}
+                          onChange={(event) =>
+                            setReviewComment(event.target.value)
+                          }
+                          placeholder="How was your experience with this broker?"
+                          className="w-full rounded-lg border border-neutral-300 p-3 text-sm focus:border-blue-500 focus:outline-none"
+                        />
+
+                        <p className="mt-1 text-right text-xs text-neutral-500">
+                          {reviewComment.length}/1000
+                        </p>
+                      </div>
+
+                      {reviewError && (
+                        <p
+                          role="alert"
+                          className="rounded-lg bg-red-50 p-3 text-sm text-red-700"
+                        >
+                          {reviewError}
+                        </p>
+                      )}
+
+                      {reviewMessage && (
+                        <p
+                          role="status"
+                          className="rounded-lg bg-green-50 p-3 text-sm text-green-700"
+                        >
+                          {reviewMessage}
+                        </p>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={reviewSubmitting}
+                        className="rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {reviewSubmitting
+                          ? 'Submitting...'
+                          : 'Submit Review'}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </section>
+            )}
           </section>
 
+          {/* Right sidebar */}
           <aside>
             <div className="sticky top-24 rounded-xl bg-white p-6 shadow-sm">
               <p className="text-sm text-neutral-500">Property Price</p>
+
               <p className="mt-1 text-3xl font-bold text-neutral-900">
                 {price > 0
                   ? `₹${price.toLocaleString('en-IN')}`
@@ -417,6 +886,54 @@ const PropertyDetailsPage = () => {
                 Status: {property.status || 'Available'}
               </p>
 
+              {/* Broker contact */}
+              {isBroker && (
+                <div className="mt-6 rounded-xl border border-neutral-200 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-50">
+                      <FiUser className="text-lg text-blue-600" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <h2 className="font-semibold text-neutral-900">
+                        {brokerName}
+                      </h2>
+
+                      <p className="text-xs text-neutral-500">
+                        Property Broker
+                      </p>
+                    </div>
+                  </div>
+
+                  {reviewCount > 0 && (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-neutral-600">
+                      <FiStar className="fill-amber-400 text-amber-500" />
+
+                      <span className="font-semibold">
+                        {averageRating.toFixed(1)}
+                      </span>
+
+                      <span>({reviewCount} reviews)</span>
+                    </div>
+                  )}
+
+                  {brokerPhone ? (
+                    <a
+                      href={`tel:${brokerPhone}`}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 font-semibold text-white transition hover:bg-green-700"
+                    >
+                      <FiPhone />
+                      Call Broker
+                    </a>
+                  ) : (
+                    <p className="mt-3 text-sm text-neutral-500">
+                      Broker phone number is not available.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Appointment booking */}
               <div className="mt-6">
                 <button
                   type="button"
@@ -480,15 +997,14 @@ const PropertyDetailsPage = () => {
                     >
                       Visit date
                     </label>
+
                     <input
                       id="visit-date"
                       type="date"
                       required
                       min={minDate}
                       value={visitDate}
-                      onChange={(event) =>
-                        setVisitDate(event.target.value)
-                      }
+                      onChange={(event) => setVisitDate(event.target.value)}
                       className="w-full rounded-lg border border-neutral-300 p-3 text-sm"
                     />
                   </div>
@@ -500,14 +1016,13 @@ const PropertyDetailsPage = () => {
                     >
                       Visit time
                     </label>
+
                     <input
                       id="visit-time"
                       type="time"
                       required
                       value={visitTime}
-                      onChange={(event) =>
-                        setVisitTime(event.target.value)
-                      }
+                      onChange={(event) => setVisitTime(event.target.value)}
                       className="w-full rounded-lg border border-neutral-300 p-3 text-sm"
                     />
                   </div>
@@ -519,14 +1034,13 @@ const PropertyDetailsPage = () => {
                     >
                       Notes (optional)
                     </label>
+
                     <textarea
                       id="visit-notes"
                       rows={3}
                       maxLength={1000}
                       value={visitNotes}
-                      onChange={(event) =>
-                        setVisitNotes(event.target.value)
-                      }
+                      onChange={(event) => setVisitNotes(event.target.value)}
                       placeholder="Message for the broker..."
                       className="w-full rounded-lg border border-neutral-300 p-3 text-sm"
                     />
@@ -543,8 +1057,8 @@ const PropertyDetailsPage = () => {
               )}
 
               <p className="mt-4 text-xs leading-5 text-neutral-500">
-                Property information is provided as listed. Please
-                verify details before making a purchase decision.
+                Property information is provided as listed. Please verify
+                details before making a purchase decision.
               </p>
             </div>
           </aside>

@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 
 const asyncHandler = require('../utils/asyncHandler');
@@ -9,6 +10,7 @@ const User = require('../models/User.model');
 const Property = require('../models/Property.model');
 const Appointment = require('../models/Appointment.model');
 const Review = require('../models/Review.model');
+const Lead = require('../models/Lead.model');
 
 const ALLOWED_PROFILE_FIELDS = [
   'bio',
@@ -28,9 +30,7 @@ const computeTrustScore = ({
 }) => {
   let score = 0;
 
-  if (verificationStatus === 'verified') {
-    score += 30;
-  }
+  if (verificationStatus === 'verified') score += 30;
 
   score += Math.min(avgRating * 10, 50);
   score += Math.min(completedAppointments, 15);
@@ -39,29 +39,19 @@ const computeTrustScore = ({
   return Math.round(Math.min(score, 100));
 };
 
-/**
- * GET /api/brokers/me
- */
 const getMyProfile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
-  let broker = await Broker.findOne({
-    user_id: userId,
-  });
+  let broker = await Broker.findOne({ user_id: userId });
 
   if (!broker) {
-    broker = await Broker.create({
-      user_id: userId,
-    });
+    broker = await Broker.create({ user_id: userId });
   }
 
   const account = await User.findById(userId);
 
   if (!account) {
-    throw new ApiError(
-      404,
-      'Associated user account not found'
-    );
+    throw new ApiError(404, 'Associated user account not found');
   }
 
   const safeAccount =
@@ -79,23 +69,15 @@ const getMyProfile = asyncHandler(async (req, res) => {
         };
 
   return res.status(200).json(
-    new ApiResponse(
-      true,
-      'Broker profile fetched successfully',
-      {
-        profile: broker,
-        account: safeAccount,
-      }
-    )
+    new ApiResponse(true, 'Broker profile fetched successfully', {
+      profile: broker,
+      account: safeAccount,
+    })
   );
 });
 
-/**
- * PUT /api/brokers/me
- */
 const updateMyProfile = asyncHandler(async (req, res) => {
   const userId = req.user.id;
-
   const updates = {};
 
   for (const field of ALLOWED_PROFILE_FIELDS) {
@@ -106,22 +88,18 @@ const updateMyProfile = asyncHandler(async (req, res) => {
 
   if (
     updates.specialties !== undefined &&
-    !Array.isArray(updates.specialties)
+    (!Array.isArray(updates.specialties) ||
+      !updates.specialties.every((item) => typeof item === 'string'))
   ) {
-    throw new ApiError(
-      400,
-      'specialties must be an array of strings'
-    );
+    throw new ApiError(400, 'specialties must be an array of strings');
   }
 
   if (
     updates.languages !== undefined &&
-    !Array.isArray(updates.languages)
+    (!Array.isArray(updates.languages) ||
+      !updates.languages.every((item) => typeof item === 'string'))
   ) {
-    throw new ApiError(
-      400,
-      'languages must be an array of strings'
-    );
+    throw new ApiError(400, 'languages must be an array of strings');
   }
 
   if (updates.location !== undefined) {
@@ -141,7 +119,6 @@ const updateMyProfile = asyncHandler(async (req, res) => {
         typeof updates.location.city === 'string'
           ? updates.location.city.trim()
           : '',
-
       locality:
         typeof updates.location.locality === 'string'
           ? updates.location.locality.trim()
@@ -152,11 +129,7 @@ const updateMyProfile = asyncHandler(async (req, res) => {
   if (updates.experience_years !== undefined) {
     const years = Number(updates.experience_years);
 
-    if (
-      Number.isNaN(years) ||
-      years < 0 ||
-      years > 60
-    ) {
+    if (Number.isNaN(years) || years < 0 || years > 60) {
       throw new ApiError(
         400,
         'experience_years must be a number between 0 and 60'
@@ -166,9 +139,7 @@ const updateMyProfile = asyncHandler(async (req, res) => {
     updates.experience_years = years;
   }
 
-  let broker = await Broker.findOne({
-    user_id: userId,
-  });
+  let broker = await Broker.findOne({ user_id: userId });
 
   if (!broker) {
     broker = await Broker.create({
@@ -181,31 +152,20 @@ const updateMyProfile = asyncHandler(async (req, res) => {
   }
 
   return res.status(200).json(
-    new ApiResponse(
-      true,
-      'Broker profile updated successfully',
-      {
-        profile: broker,
-      }
-    )
+    new ApiResponse(true, 'Broker profile updated successfully', {
+      profile: broker,
+    })
   );
 });
 
-/**
- * GET /api/brokers/me/dashboard
- */
 const getMyDashboard = asyncHandler(async (req, res) => {
   const brokerUserId = req.user.id;
 
   if (!mongoose.Types.ObjectId.isValid(brokerUserId)) {
-    throw new ApiError(
-      400,
-      'Invalid authenticated user ID'
-    );
+    throw new ApiError(400, 'Invalid authenticated user ID');
   }
 
-  const brokerObjectId =
-    new mongoose.Types.ObjectId(brokerUserId);
+  const brokerObjectId = new mongoose.Types.ObjectId(brokerUserId);
 
   const [
     broker,
@@ -213,19 +173,19 @@ const getMyDashboard = asyncHandler(async (req, res) => {
     activeProperties,
     totalLeads,
     newLeads,
+    contactedLeads,
+    qualifiedLeads,
+    convertedLeads,
+    lostLeads,
     upcomingAppointments,
     completedAppointments,
     reviewStats,
   ] = await Promise.all([
-    Broker.findOne({
-      user_id: brokerUserId,
-    }),
+    Broker.findOne({ user_id: brokerUserId }),
 
     Property.countDocuments({
       owner_id: brokerUserId,
-      status: {
-        $ne: 'deleted',
-      },
+      status: { $ne: 'deleted' },
     }),
 
     Property.countDocuments({
@@ -233,21 +193,37 @@ const getMyDashboard = asyncHandler(async (req, res) => {
       status: 'approved',
     }),
 
-    Appointment.countDocuments({
-      broker_id: brokerUserId,
+    Lead.countDocuments({ broker_id: brokerObjectId }),
+
+    Lead.countDocuments({
+      broker_id: brokerObjectId,
+      status: 'new',
     }),
 
-    Appointment.countDocuments({
-      broker_id: brokerUserId,
-      status: 'pending',
+    Lead.countDocuments({
+      broker_id: brokerObjectId,
+      status: 'contacted',
+    }),
+
+    Lead.countDocuments({
+      broker_id: brokerObjectId,
+      status: 'qualified',
+    }),
+
+    Lead.countDocuments({
+      broker_id: brokerObjectId,
+      status: 'converted',
+    }),
+
+    Lead.countDocuments({
+      broker_id: brokerObjectId,
+      status: 'lost',
     }),
 
     Appointment.countDocuments({
       broker_id: brokerUserId,
       status: 'confirmed',
-      scheduled_at: {
-        $gte: new Date(),
-      },
+      scheduled_at: { $gte: new Date() },
     }),
 
     Appointment.countDocuments({
@@ -256,20 +232,12 @@ const getMyDashboard = asyncHandler(async (req, res) => {
     }),
 
     Review.aggregate([
-      {
-        $match: {
-          broker_id: brokerObjectId,
-        },
-      },
+      { $match: { broker_id: brokerObjectId } },
       {
         $group: {
           _id: null,
-          avgRating: {
-            $avg: '$rating',
-          },
-          count: {
-            $sum: 1,
-          },
+          avgRating: { $avg: '$rating' },
+          count: { $sum: 1 },
         },
       },
     ]),
@@ -281,18 +249,12 @@ const getMyDashboard = asyncHandler(async (req, res) => {
       : 0;
 
   const reviewCount =
-    reviewStats.length > 0
-      ? reviewStats[0].count
-      : 0;
+    reviewStats.length > 0 ? reviewStats[0].count : 0;
 
   const trustScore = computeTrustScore({
-    verificationStatus:
-      broker?.verification_status || 'pending',
-
+    verificationStatus: broker?.verification_status || 'pending',
     avgRating: averageRating,
-
     completedAppointments,
-
     reviewCount,
   });
 
@@ -300,32 +262,31 @@ const getMyDashboard = asyncHandler(async (req, res) => {
     broker.rating = averageRating;
     broker.review_count = reviewCount;
     broker.trust_score = trustScore;
-
     await broker.save();
   }
 
+  const conversionRate =
+    totalLeads > 0
+      ? Number(((convertedLeads / totalLeads) * 100).toFixed(2))
+      : 0;
+
   return res.status(200).json(
-    new ApiResponse(
-      true,
-      'Broker dashboard data fetched successfully',
-      {
-        total_properties: totalProperties,
-        active_properties: activeProperties,
-
-        total_leads: totalLeads,
-        new_leads: newLeads,
-
-        upcoming_appointments:
-          upcomingAppointments,
-
-        completed_appointments:
-          completedAppointments,
-
-        average_rating: averageRating,
-        review_count: reviewCount,
-        trust_score: trustScore,
-      }
-    )
+    new ApiResponse(true, 'Broker dashboard data fetched successfully', {
+      total_properties: totalProperties,
+      active_properties: activeProperties,
+      total_leads: totalLeads,
+      new_leads: newLeads,
+      contacted_leads: contactedLeads,
+      qualified_leads: qualifiedLeads,
+      converted_leads: convertedLeads,
+      lost_leads: lostLeads,
+      conversion_rate: conversionRate,
+      upcoming_appointments: upcomingAppointments,
+      completed_appointments: completedAppointments,
+      average_rating: averageRating,
+      review_count: reviewCount,
+      trust_score: trustScore,
+    })
   );
 });
 

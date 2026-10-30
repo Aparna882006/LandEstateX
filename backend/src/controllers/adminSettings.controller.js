@@ -1,31 +1,34 @@
-/**
- * adminSettings.controller.js
- * Get/update the single global Settings document.
- */
+const asyncHandler = require("../utils/asyncHandler");
+const ApiResponse = require("../utils/apiResponse");
+const Settings = require("../models/Settings.model");
 
-/**
- * adminSettings.controller.js
- * Get/update the single global Settings document.
- */
+const BOOLEAN_FIELDS = [
+  "maintenanceMode",
+  "allowNewRegistrations",
+  "requireEmailVerification",
+  "listingApprovalRequired",
+];
 
-const asyncHandler = require('../utils/asyncHandler');
-const ApiResponse = require('../utils/apiResponse');
-const Settings = require('../models/Settings.model');
+const NUMBER_FIELDS = [
+  "maxPropertyImages",
+  "fraudFlagPriceDeviationPercent",
+  "fraudFlagMaxListingsPerDay",
+];
 
 // GET /api/v1/admin/settings
 const getSettings = asyncHandler(async (req, res) => {
-  let settings = await Settings.findOne({ key: 'global' });
+  let settings = await Settings.findOne({ key: "global" });
 
   if (!settings) {
     settings = await Settings.create({
-      key: 'global',
+      key: "global",
     });
   }
 
   return res.status(200).json(
     new ApiResponse(
       true,
-      'Settings fetched successfully',
+      "Settings fetched successfully",
       settings
     )
   );
@@ -33,36 +36,98 @@ const getSettings = asyncHandler(async (req, res) => {
 
 // PATCH /api/v1/admin/settings
 const updateSettings = asyncHandler(async (req, res) => {
-  const disallowed = [
-    '_id',
-    'key',
-    'createdAt',
-    'updatedAt',
-  ];
+  const updates = {};
 
-  const updates = Object.fromEntries(
-    Object.entries(req.body).filter(
-      ([key]) => !disallowed.includes(key)
-    )
-  );
+  for (const key of BOOLEAN_FIELDS) {
+    if (req.body[key] !== undefined) {
+      if (typeof req.body[key] !== "boolean") {
+        return res.status(400).json(
+          new ApiResponse(
+            false,
+            `${key} must be a boolean`
+          )
+        );
+      }
+
+      updates[key] = req.body[key];
+    }
+  }
+
+  for (const key of NUMBER_FIELDS) {
+    if (req.body[key] !== undefined) {
+      const value = Number(req.body[key]);
+
+      if (!Number.isFinite(value)) {
+        return res.status(400).json(
+          new ApiResponse(
+            false,
+            `${key} must be a valid number`
+          )
+        );
+      }
+
+      if (value < 0) {
+        return res.status(400).json(
+          new ApiResponse(
+            false,
+            `${key} cannot be negative`
+          )
+        );
+      }
+
+      if (
+        key === "maxPropertyImages" ||
+        key === "fraudFlagMaxListingsPerDay"
+      ) {
+        if (!Number.isInteger(value) || value < 1) {
+          return res.status(400).json(
+            new ApiResponse(
+              false,
+              `${key} must be a positive integer`
+            )
+          );
+        }
+      }
+
+      if (
+        key === "fraudFlagPriceDeviationPercent" &&
+        value > 1000
+      ) {
+        return res.status(400).json(
+          new ApiResponse(
+            false,
+            "Price deviation threshold cannot exceed 1000%"
+          )
+        );
+      }
+
+      updates[key] = value;
+    }
+  }
 
   const settings = await Settings.findOneAndUpdate(
-    { key: 'global' },
+    { key: "global" },
     {
-      ...updates,
-      updatedBy: req.user._id,
+      $set: {
+        ...updates,
+        updatedBy: req.user._id,
+      },
+      $setOnInsert: {
+        key: "global",
+      },
     },
     {
       new: true,
       upsert: true,
       runValidators: true,
+      setDefaultsOnInsert: true,
     }
   );
 
   return res.status(200).json(
     new ApiResponse(
       true,
-      'Settings updated successfully',
+      "Settings updated successfully",
       settings
     )
   );

@@ -1,28 +1,29 @@
 
-import axios from 'axios';
+import axios from "axios";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
-  'http://localhost:5000/api/v1';
-
-console.log('API BASE URL =', API_BASE_URL);
+  "http://localhost:5000/api/v1";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
 });
 
-// Attach access token to requests.
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+// Attach access token to every request
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("accessToken");
 
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-  return config;
-});
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -41,7 +42,6 @@ const processQueue = (error, token = null) => {
 
 api.interceptors.response.use(
   (response) => response,
-
   async (error) => {
     const originalRequest = error.config;
 
@@ -49,9 +49,9 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const url = originalRequest.url || '';
+    const url = originalRequest.url || "";
 
-    // Do not attempt token refresh for login or refresh requests.
+    // Do not refresh tokens for login or refresh-token requests
     if (
       /\/auth\/login\/?$/.test(url) ||
       /\/auth\/refresh-token\/?$/.test(url)
@@ -59,6 +59,7 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // Refresh only on 401, and never retry the same request twice
     if (
       error.response?.status !== 401 ||
       originalRequest._retry
@@ -82,20 +83,20 @@ api.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const { data } = await api.post('/auth/refresh-token');
+      // Uses the shared Axios instance and cookies
+      const { data } = await api.post("/auth/refresh-token");
 
       const newToken = data?.data?.access_token;
 
       if (!newToken) {
         throw new Error(
-          'Refresh endpoint did not return an access token.'
+          "Refresh endpoint did not return an access token."
         );
       }
 
-      localStorage.setItem('accessToken', newToken);
+      localStorage.setItem("accessToken", newToken);
 
-      api.defaults.headers.common.Authorization =
-        `Bearer ${newToken}`;
+      api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
 
       processQueue(null, newToken);
 
@@ -106,13 +107,13 @@ api.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null);
 
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
 
       delete api.defaults.headers.common.Authorization;
 
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
       }
 
       return Promise.reject(refreshError);

@@ -1,4 +1,6 @@
+
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   getMyAppointments,
@@ -7,6 +9,7 @@ import {
 
 const STATUS_OPTIONS = [
   "all",
+  "upcoming",
   "pending",
   "confirmed",
   "completed",
@@ -23,65 +26,92 @@ const formatDateTime = (value) => {
 };
 
 const AppointmentCalendar = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialStatus = searchParams.get("view") || "all";
+
   const [appointments, setAppointments] = useState([]);
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState("");
   const [error, setError] = useState("");
 
-  const loadAppointments = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const params =
-        status === "all"
-          ? {}
-          : { status };
-
-      const { data } = await getMyAppointments(params);
-
-      setAppointments(
-        data.data?.appointments || []
-      );
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          "Failed to load appointments."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    setStatus(searchParams.get("view") || "all");
+  }, [searchParams]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const loadAppointments = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        // Completed ko API se filter karo.
+        // Upcoming ko date aur status ke basis par client-side filter karenge.
+        const params =
+          status === "all" || status === "upcoming"
+            ? {}
+            : { status };
+
+        const { data } = await getMyAppointments(params);
+        const results = data?.data?.appointments || [];
+
+        if (!cancelled) {
+          setAppointments(results);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err.response?.data?.message ||
+              "Failed to load appointments."
+          );
+          setAppointments([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
     loadAppointments();
+
+    return () => {
+      cancelled = true;
+    };
   }, [status]);
 
-  const handleStatusChange = async (
-    appointmentId,
-    nextStatus
-  ) => {
+  const handleFilterChange = (nextStatus) => {
+    setStatus(nextStatus);
+
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (nextStatus === "all") {
+      nextParams.delete("view");
+    } else {
+      nextParams.set("view", nextStatus);
+    }
+
+    setSearchParams(nextParams);
+  };
+
+  const handleStatusChange = async (appointmentId, nextStatus) => {
     try {
       setUpdatingId(appointmentId);
       setError("");
 
-      const { data } =
-        await updateAppointmentStatus(
-          appointmentId,
-          nextStatus
-        );
+      await updateAppointmentStatus(appointmentId, nextStatus);
 
-      const updatedAppointment =
-        data.data?.appointment;
+      // Refresh so the appointment disappears from the current
+      // filtered list if it no longer matches the selected category.
+      const params =
+        status === "all" || status === "upcoming"
+          ? {}
+          : { status };
 
-      setAppointments((current) =>
-        current.map((appointment) =>
-          appointment._id === appointmentId
-            ? updatedAppointment
-            : appointment
-        )
-      );
+      const { data } = await getMyAppointments(params);
+      setAppointments(data?.data?.appointments || []);
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -95,32 +125,42 @@ const AppointmentCalendar = () => {
   const getAvailableActions = (appointmentStatus) => {
     if (appointmentStatus === "pending") {
       return [
-        {
-          label: "Confirm",
-          status: "confirmed",
-        },
-        {
-          label: "Cancel",
-          status: "cancelled",
-        },
+        { label: "Confirm", status: "confirmed" },
+        { label: "Cancel", status: "cancelled" },
       ];
     }
 
     if (appointmentStatus === "confirmed") {
       return [
-        {
-          label: "Complete",
-          status: "completed",
-        },
-        {
-          label: "Cancel",
-          status: "cancelled",
-        },
+        { label: "Complete", status: "completed" },
+        { label: "Cancel", status: "cancelled" },
       ];
     }
 
     return [];
   };
+
+  const visibleAppointments =
+    status === "upcoming"
+      ? appointments.filter((appointment) => {
+          const appointmentDate = new Date(
+            appointment.scheduled_at
+          ).getTime();
+
+          return (
+            ["pending", "confirmed"].includes(appointment.status) &&
+            Number.isFinite(appointmentDate) &&
+            appointmentDate >= Date.now()
+          );
+        })
+      : appointments;
+
+  const pageTitle =
+    status === "upcoming"
+      ? "Upcoming Appointments"
+      : status === "all"
+        ? "Appointments"
+        : `${status.charAt(0).toUpperCase()}${status.slice(1)} Appointments`;
 
   if (loading) {
     return (
@@ -137,9 +177,8 @@ const AppointmentCalendar = () => {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-neutral-900">
-            Appointments
+            {pageTitle}
           </h2>
-
           <p className="mt-1 text-sm text-neutral-500">
             Manage your property appointments and buyer requests.
           </p>
@@ -148,19 +187,17 @@ const AppointmentCalendar = () => {
         <select
           value={status}
           onChange={(event) =>
-            setStatus(event.target.value)
+            handleFilterChange(event.target.value)
           }
           className="rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:border-primary-500"
         >
           {STATUS_OPTIONS.map((option) => (
-            <option
-              key={option}
-              value={option}
-            >
+            <option key={option} value={option}>
               {option === "all"
-                ? "All Statuses"
-                : option.charAt(0).toUpperCase() +
-                  option.slice(1)}
+                ? "All Appointments"
+                : option === "upcoming"
+                  ? "Upcoming Appointments"
+                  : option.charAt(0).toUpperCase() + option.slice(1)}
             </option>
           ))}
         </select>
@@ -172,26 +209,27 @@ const AppointmentCalendar = () => {
         </div>
       )}
 
-      {appointments.length === 0 ? (
+      {visibleAppointments.length === 0 ? (
         <div className="rounded-lg bg-white p-10 text-center shadow-sm">
           <h3 className="text-base font-semibold text-neutral-900">
-            No appointments found
+            {status === "upcoming"
+              ? "No upcoming appointments"
+              : status === "all"
+                ? "No appointments found"
+                : `No ${status} appointments`}
           </h3>
-
           <p className="mt-1 text-sm text-neutral-500">
-            There are no appointments matching this status.
+            {status === "upcoming"
+              ? "You have no future pending or confirmed appointments."
+              : "There are no appointments matching this category."}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {appointments.map((appointment) => {
-            const actions = getAvailableActions(
-              appointment.status
-            );
-
+          {visibleAppointments.map((appointment) => {
+            const actions = getAvailableActions(appointment.status);
             const buyer = appointment.buyer_id;
-            const property =
-              appointment.property_id;
+            const property = appointment.property_id;
 
             return (
               <div
@@ -201,15 +239,10 @@ const AppointmentCalendar = () => {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0">
                     <h3 className="text-base font-semibold text-neutral-900">
-                      {property?.title ||
-                        "Property unavailable"}
+                      {property?.title || "Property unavailable"}
                     </h3>
-
                     <p className="mt-1 text-sm text-neutral-500">
-                      Scheduled:{" "}
-                      {formatDateTime(
-                        appointment.scheduled_at
-                      )}
+                      Scheduled: {formatDateTime(appointment.scheduled_at)}
                     </p>
                   </div>
 
@@ -223,15 +256,12 @@ const AppointmentCalendar = () => {
                     <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">
                       Buyer
                     </p>
-
                     <p className="mt-1 text-sm font-medium text-neutral-800">
                       {buyer?.full_name || "—"}
                     </p>
-
                     <p className="text-sm text-neutral-500">
                       {buyer?.email || "—"}
                     </p>
-
                     {buyer?.phone_number && (
                       <p className="text-sm text-neutral-500">
                         {buyer.phone_number}
@@ -243,11 +273,9 @@ const AppointmentCalendar = () => {
                     <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">
                       Property
                     </p>
-
                     <p className="mt-1 text-sm text-neutral-800">
                       {property?.property_type || "—"}
                     </p>
-
                     {property?.location?.city && (
                       <p className="text-sm text-neutral-500">
                         {property.location.city}
@@ -256,13 +284,9 @@ const AppointmentCalendar = () => {
                           : ""}
                       </p>
                     )}
-
                     {property?.price !== undefined && (
                       <p className="text-sm text-neutral-500">
-                        ₹
-                        {Number(
-                          property.price
-                        ).toLocaleString("en-IN")}
+                        ₹{Number(property.price).toLocaleString("en-IN")}
                       </p>
                     )}
                   </div>
@@ -273,7 +297,6 @@ const AppointmentCalendar = () => {
                     <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">
                       Notes
                     </p>
-
                     <p className="mt-1 text-sm text-neutral-600">
                       {appointment.notes}
                     </p>
@@ -286,10 +309,7 @@ const AppointmentCalendar = () => {
                       <button
                         key={action.status}
                         type="button"
-                        disabled={
-                          updatingId ===
-                          appointment._id
-                        }
+                        disabled={updatingId === appointment._id}
                         onClick={() =>
                           handleStatusChange(
                             appointment._id,
@@ -298,8 +318,7 @@ const AppointmentCalendar = () => {
                         }
                         className="rounded-md bg-primary-900 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {updatingId ===
-                        appointment._id
+                        {updatingId === appointment._id
                           ? "Updating..."
                           : action.label}
                       </button>

@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const asyncHandler = require('../utils/asyncHandler');
@@ -8,6 +7,7 @@ const ApiResponse = require('../utils/apiResponse');
 const Appointment = require('../models/Appointment.model');
 const Property = require('../models/Property.model');
 const User = require('../models/User.model');
+const Lead = require('../models/Lead.model');
 
 const ALLOWED_STATUSES = [
   'pending',
@@ -17,14 +17,16 @@ const ALLOWED_STATUSES = [
 ];
 
 // POST /api/v1/appointments
-// Buyer requests a visit for an approved property.
+// Buyer creates an appointment and a lead is created or reused.
 const createAppointment = asyncHandler(async (req, res) => {
   const { property_id, scheduled_at, notes = '' } = req.body;
 
+  // Validate property ID
   if (!mongoose.isValidObjectId(property_id)) {
     throw new ApiError(400, 'Invalid property ID');
   }
 
+  // Validate scheduled date
   if (!scheduled_at) {
     throw new ApiError(400, 'Visit date and time are required');
   }
@@ -41,6 +43,7 @@ const createAppointment = asyncHandler(async (req, res) => {
     );
   }
 
+  // Validate notes
   if (typeof notes !== 'string' || notes.length > 1000) {
     throw new ApiError(
       400,
@@ -48,6 +51,7 @@ const createAppointment = asyncHandler(async (req, res) => {
     );
   }
 
+  // Find approved property
   const property = await Property.findOne({
     _id: property_id,
     status: 'approved',
@@ -60,6 +64,7 @@ const createAppointment = asyncHandler(async (req, res) => {
     );
   }
 
+  // Prevent booking own property
   if (property.owner_id.toString() === req.user.id) {
     throw new ApiError(
       400,
@@ -67,7 +72,7 @@ const createAppointment = asyncHandler(async (req, res) => {
     );
   }
 
-  // Current project assumption: property owner is the broker.
+  // Find active broker who owns the property
   const broker = await User.findOne({
     _id: property.owner_id,
     role: 'broker',
@@ -81,6 +86,7 @@ const createAppointment = asyncHandler(async (req, res) => {
     );
   }
 
+  // 1. Create appointment
   const appointment = await Appointment.create({
     broker_id: broker._id,
     buyer_id: req.user.id,
@@ -90,6 +96,50 @@ const createAppointment = asyncHandler(async (req, res) => {
     status: 'pending',
   });
 
+  console.log('Appointment created:', appointment._id.toString());
+
+  // 2. Create or reuse lead
+  try {
+    const lead = await Lead.findOneAndUpdate(
+      {
+        broker_id: broker._id,
+        buyer_id: req.user.id,
+        property_id: property._id,
+      },
+      {
+        $setOnInsert: {
+          broker_id: broker._id,
+          buyer_id: req.user.id,
+          property_id: property._id,
+          status: 'new',
+          notes: notes.trim(),
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        setDefaultsOnInsert: true,
+        runValidators: true,
+      }
+    );
+
+    console.log(
+      'Lead created or reused successfully:',
+      lead?._id?.toString()
+    );
+  } catch (error) {
+    // Detailed diagnostic logging
+    console.error('========== LEAD CREATION FAILED ==========');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error details:', error);
+    console.error('Broker ID:', broker._id.toString());
+    console.error('Buyer ID:', req.user.id);
+    console.error('Property ID:', property._id.toString());
+    console.error('==========================================');
+  }
+
+  // 3. Return appointment response
   return res.status(201).json(
     new ApiResponse(
       true,
@@ -100,7 +150,7 @@ const createAppointment = asyncHandler(async (req, res) => {
 });
 
 // GET /api/v1/appointments/me
-// Broker sees appointments assigned to them.
+// Broker sees their appointments.
 const getMyAppointments = asyncHandler(async (req, res) => {
   const { status } = req.query;
 
@@ -138,7 +188,7 @@ const getMyAppointments = asyncHandler(async (req, res) => {
 });
 
 // GET /api/v1/appointments/my-bookings
-// Buyer sees only their own bookings.
+// Buyer sees their bookings.
 const getMyBookings = asyncHandler(async (req, res) => {
   const { status } = req.query;
 
