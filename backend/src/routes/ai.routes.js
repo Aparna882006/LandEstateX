@@ -1,10 +1,23 @@
 
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const { predictPrice } = require('../controllers/ai.controller');
+
+const {
+  predictPrice,
+  recommendProperties,
+  imageValuation,
+  chatWithAssistant,
+  runPropertyInvestmentAnalysis,
+} = require('../controllers/ai.controller');
+
+const { protect } = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
 
 const router = express.Router();
 
+// ---------------------------------------------
+// RATE LIMITERS
+// ---------------------------------------------
 const predictionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
@@ -14,6 +27,91 @@ const predictionLimiter = rateLimit({
   },
 });
 
-router.post('/price-prediction', predictionLimiter, predictPrice);
+const recommendationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: {
+    success: false,
+    message: 'Too many recommendation requests. Please try again later.',
+  },
+});
+
+const imageValuationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: 'Too many image valuation requests. Please try again later.',
+  },
+});
+
+const chatbotLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  message: {
+    success: false,
+    message: 'Too many chatbot messages. Please try again later.',
+  },
+});
+
+const investmentAnalyticsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: {
+    success: false,
+    message:
+      'Too many investment analysis requests. Please try again later.',
+  },
+});
+
+// ---------------------------------------------
+// PRICE PREDICTION
+// ---------------------------------------------
+router.post(
+  '/price-prediction',
+  predictionLimiter,
+  predictPrice
+);
+
+// ---------------------------------------------
+// PROPERTY RECOMMENDATIONS
+// ---------------------------------------------
+router.post(
+  '/recommendations',
+  protect,
+  recommendationLimiter,
+  recommendProperties
+);
+
+// ---------------------------------------------
+// IMAGE VALUATION
+// ---------------------------------------------
+router.post(
+  '/image-valuation',
+  protect,
+  imageValuationLimiter,
+  upload.single('image'),
+  imageValuation
+);
+
+// ---------------------------------------------
+// PROPERTY CHATBOT
+// ---------------------------------------------
+router.post(
+  '/chatbot',
+  protect,
+  chatbotLimiter,
+  chatWithAssistant
+);
+
+// ---------------------------------------------
+// PROPERTY INVESTMENT ANALYTICS
+// ---------------------------------------------
+router.post(
+  '/investment-analytics/:propertyId/analyze',
+  protect,
+  investmentAnalyticsLimiter,
+  runPropertyInvestmentAnalysis
+);
 
 module.exports = router;

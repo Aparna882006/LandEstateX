@@ -1,0 +1,184 @@
+
+import io
+import urllib.request
+from urllib.parse import urlparse
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field, field_validator
+from PIL import Image, ImageStat, UnidentifiedImageError
+
+from app.api.price_prediction import predict_property_price
+from app.core.security import verify_internal_api_key
+
+
+router = APIRouter(
+    prefix="/api/image-valuation",
+    tags=["Image Valuation"],
+    dependencies=[Depends(verify_internal_api_key)],
+)
+
+ALLOWED_HOST = "res.cloudinary.com"
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
+
+class ImageValuationRequest(BaseModel):
+    image_url: str
+    property_type: str
+    listing_type: str
+    area_sqft: float = Field(gt=0)
+    bedrooms: int = Field(ge=0)
+    bathrooms: int = Field(ge=0)
+    city: str
+    locality: str
+
+    @field_validator("image_url")
+    @classmethod
+    def validate_image_url(cls, value):
+        value = value.strip()
+        parsed = urlparse(value)
+
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != ALLOWED_HOST
+        ):
+            raise ValueError(
+                "Only Cloudinary HTTPS image URLs are allowed."
+            )
+
+        return value
+
+    @field_validator("property_type")
+    @classmethod
+    def validate_property_type(cls, value):
+        value = value.strip().lower()
+
+        if value not in {"apartment", "villa", "plot", "commercial"}:
+            raise ValueError("Invalid property_type.")
+
+        return value
+
+    @field_validator("listing_type")
+    @classmethod
+    def validate_listing_type(cls, value):
+        value = value.strip().lower()
+
+        if value not in {"sale", "rent"}:
+            raise ValueError("Invalid listing_type.")
+
+        return value
+
+    @field_validator("city")
+    @classmethod
+    def validate_city(cls, value):
+        value = value.strip()
+
+        if not value:
+            raise ValueError("City cannot be empty.")
+
+        return value
+
+    @field_validator("locality")
+    @classmethod
+    def validate_locality(cls, value):
+        return value.strip()
+
+
+def analyse_property_image(image_url):
+    parsed = urlparse(image_url)
+
+    if parsed.hostname != ALLOWED_HOST or parsed.scheme != "https":
+        raise ValueError("Unsupported image source.")
+
+    request = urllib.request.Request(
+        image_url,
+        headers={"User-Agent": "LandEstateX-AI/1.0"},
+    )
+
+    with urllib.request.urlopen(request, timeout=10) as response:
+        content_type = response.headers.get("Content-Type", "")
+
+        if not content_type.startswith("image/"):
+            raise ValueError("The supplied URL is not an image.")
+
+        image_bytes = response.read(MAX_IMAGE_BYTES + 1)
+
+    if len(image_bytes) > MAX_IMAGE_BYTES:
+        raise ValueError("Image must not exceed 10 MB.")
+
+    with Image.open(io.BytesIO(image_bytes)) as image:
+        image.verify()
+
+    with Image.open(io.BytesIO(image_bytes)) as image:
+        image_format = image.format or "unknown"
+
+        image = image.convert("RGB")
+
+        width, height = image.size
+        statistics = ImageStat.Stat(image)
+
+        brightness = round(sum(statistics.mean) / 3, 2)
+        contrast = round(sum(statistics.stddev) / 3, 2)
+
+        if width >= 1200 and height >= 800:
+            resolution_quality = "high"
+        elif width >= 600 and height >= 400:
+            resolution_quality = "medium"
+        else:
+            resolution_quality = "low"
+
+        return {
+            "format": image_format,
+            "width": width,
+            "height": height,
+            "resolution": f"{width}x{height}",
+            "file_size_bytes": len(image_bytes),
+            "brightness": brightness,
+            "contrast": contrast,
+            "resolution_quality": resolution_quality,
+        }
+
+
+@router.post("/")
+def analyse_image_and_predict(request: ImageValuationRequest):
+    try:
+        image_analysis = analyse_property_image(request.image_url)
+
+        property_details = {
+            "property_type": request.property_type,
+            "listing_type": request.listing_type,
+            "area_sqft": request.area_sqft,
+            "bedrooms": request.bedrooms,
+            "bathrooms": request.bathrooms,
+            "city": request.city,
+            "locality": request.locality,
+        }
+
+        predicted_price = predict_property_price(property_details)
+
+        return {
+            "success": True,
+            "message": "Image analysis and property price estimate generated.",
+            "image_analysis": image_analysis,
+            "price_estimation": {
+                "predicted_price": predicted_price,
+                "currency": "INR",
+                "data_quality": "synthetic_demo",
+                "prediction_source": "structured_property_details",
+            },
+            "data_quality": "image_diagnostics_with_synthetic_price_estimate",
+            "disclaimer": (
+                "Image diagnostics do not determine construction quality "
+                "or modify the estimated price. The price estimate is based "
+                "on structured property details and a synthetic demo model."
+            ),
+        }
+
+    except (ValueError, UnidentifiedImageError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    except Exception as exc:
+        print(f"IMAGE VALUATION ERROR: {type(exc).__name__}: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail="Image analysis or price estimation failed.",
+        )

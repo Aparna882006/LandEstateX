@@ -1,4 +1,4 @@
-
+﻿
 import { useState, useEffect, useCallback } from 'react';
 import {
   useSearchParams,
@@ -46,6 +46,14 @@ const INITIAL_FILTERS = {
 const PropertyListingPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const purpose = searchParams.get('purpose');
+
+  const listingType =
+    purpose === 'rent'
+      ? 'rent'
+      : ['buy', 'invest'].includes(purpose)
+        ? 'sale'
+        : searchParams.get('listing_type') || undefined;
 
   const [properties, setProperties] = useState([]);
 
@@ -92,6 +100,7 @@ const PropertyListingPage = () => {
         q: debouncedKeyword || undefined,
         min_price: filters.min_price || undefined,
         max_price: filters.max_price || undefined,
+        listing_type: listingType,
         property_type: filters.property_type || undefined,
         bedrooms: filters.bedrooms || undefined,
         min_area: filters.min_area || undefined,
@@ -114,7 +123,7 @@ const PropertyListingPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [debouncedKeyword, filters, sort, page]);
+  }, [debouncedKeyword, filters, listingType, sort, page]);
 
   useEffect(() => {
     fetchProperties();
@@ -361,3 +370,4 @@ const PropertyListingPage = () => {
 };
 
 export default PropertyListingPage;
+

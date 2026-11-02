@@ -1,6 +1,8 @@
 
 import PricePredictionCard from '../../components/ai/PricePredictionCard';
 import PriceTrendPanel from '../../components/ai/PriceTrendPanel';
+import InvestmentAnalytics from '../../components/ai/InvestmentAnalytics';
+
 import { useEffect, useState } from 'react';
 
 import { Link, useParams } from 'react-router-dom';
@@ -49,7 +51,6 @@ const PropertyDetailsPage = () => {
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
 
-  // Appointment booking state
   const [showVisitForm, setShowVisitForm] = useState(false);
   const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
@@ -58,7 +59,6 @@ const PropertyDetailsPage = () => {
   const [bookingMessage, setBookingMessage] = useState('');
   const [bookingError, setBookingError] = useState('');
 
-  // Broker review state
   const [reviews, setReviews] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
@@ -90,6 +90,7 @@ const PropertyDetailsPage = () => {
         if (!propertyData || cancelled) return;
 
         setProperty(propertyData);
+        setActiveImage(0);
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -263,7 +264,7 @@ const PropertyDetailsPage = () => {
         comment: reviewComment.trim(),
       };
 
-      const response = await createReview(payload);
+      await createReview(payload);
 
       setReviewMessage('Your review was submitted successfully.');
       setReviewComment('');
@@ -460,7 +461,7 @@ const PropertyDetailsPage = () => {
   const price = Number(property.price) || 0;
   const minDate = new Date().toLocaleDateString('en-CA');
 
-  // Normalize market filters using the current property
+  // Property fields for AI and market intelligence
   const propertyCity =
     property.city ||
     property.location?.city ||
@@ -478,6 +479,48 @@ const PropertyDetailsPage = () => {
   const listingType = String(
     property.listing_type || property.purpose || 'sale'
   ).toLowerCase();
+
+  // Preserve actual zero values and keep missing fields blank.
+  const rawArea =
+    property.area_sqft ?? property.area;
+
+  const predictionArea =
+    rawArea !== undefined && rawArea !== null && rawArea !== ''
+      ? Number(rawArea)
+      : '';
+
+  const rawBedrooms =
+    property.bedrooms ?? property.bhk;
+
+  const predictionBedrooms =
+    rawBedrooms !== undefined &&
+    rawBedrooms !== null &&
+    rawBedrooms !== ''
+      ? Number(rawBedrooms)
+      : '';
+
+  const rawBathrooms = property.bathrooms;
+
+  const predictionBathrooms =
+    rawBathrooms !== undefined &&
+    rawBathrooms !== null &&
+    rawBathrooms !== ''
+      ? Number(rawBathrooms)
+      : '';
+
+  const predictionInitialData = {
+    property_type: propertyType,
+    listing_type: listingType,
+    area_sqft: predictionArea,
+    bedrooms: predictionBedrooms,
+    bathrooms: predictionBathrooms,
+    city: propertyCity,
+    locality:
+      property.locality ||
+      property.location?.locality ||
+      property.location?.address ||
+      '',
+  };
 
   const formatDate = (dateValue) => {
     if (!dateValue) return '';
@@ -630,21 +673,7 @@ const PropertyDetailsPage = () => {
 
               <PricePredictionCard
                 key={String(property._id || id)}
-                initialData={{
-                  property_type: propertyType,
-                  listing_type: listingType,
-                  area_sqft:
-                    Number(property.area_sqft || property.area) || 1500,
-                  bedrooms:
-                    Number(property.bedrooms || property.bhk) || 3,
-                  bathrooms: Number(property.bathrooms) || 2,
-                  city: propertyCity,
-                  locality:
-                    property.locality ||
-                    property.location?.locality ||
-                    property.location?.address ||
-                    '',
-                }}
+                initialData={predictionInitialData}
                 listedPrice={price}
               />
             </section>
@@ -660,6 +689,19 @@ const PropertyDetailsPage = () => {
                 listingType={listingType}
               />
             </section>
+
+            {/* AI Investment Analytics */}
+            {listingType === 'sale' && (
+              <section className="mt-6 rounded-xl bg-white p-6 shadow-sm">
+                <InvestmentAnalytics
+                  key={String(property._id || id)}
+                  property={{
+                    ...property,
+                    listing_type: listingType,
+                  }}
+                />
+              </section>
+            )}
 
             {/* Broker reviews */}
             {isBroker && (

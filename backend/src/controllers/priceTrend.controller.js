@@ -1,6 +1,6 @@
-
 const Property = require('../models/Property.model');
 const PropertyPriceHistory = require('../models/PropertyPriceHistory.model');
+const { buildPriceForecast } = require('../services/priceForecast.service');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -85,7 +85,8 @@ const getPriceTrends = asyncHandler(async (req, res) => {
 
   let historicalData = [];
 
-  // Historical comparisons must use the same market segment.
+  let forecastResult = buildPriceForecast([]);
+
   if (
     city &&
     allowedPropertyTypes.includes(propertyType) &&
@@ -124,33 +125,48 @@ const getPriceTrends = asyncHandler(async (req, res) => {
             : Number(record.median_price_per_sqft),
         sample_count: Number(record.sample_count),
       }));
-  }
 
-  // Do not manufacture a forecast from insufficient history.
-  const forecastData = [];
+    forecastResult = buildPriceForecast(historyRecords);
+  }
 
   const data = {
     source: 'approved_listing_asking_prices',
     generated_at: new Date().toISOString(),
+
     filters: {
       city: city || null,
       locality: locality || null,
       property_type: propertyType || null,
       listing_type: listingType || null,
     },
+
     sample_count: prices.length,
+
     statistics: {
       average_price: average(prices),
       median_price: median(prices),
       average_price_per_sqft: average(rates),
       median_price_per_sqft: median(rates),
     },
+
     historical_data: historicalData,
-    forecast_data: forecastData,
+
+    forecast_available: forecastResult.available,
+    forecast_method: forecastResult.method,
+    forecast_confidence: forecastResult.confidence || null,
+    forecast_historical_months:
+      forecastResult.historical_months ||
+      forecastResult.available_months ||
+      0,
+
+    forecast_data: forecastResult.forecast_data,
+
+    forecast_message: forecastResult.message,
+
     message:
-      historicalData.length < 2
-        ? 'Current approved listing statistics are available. At least two monthly historical snapshots are needed to show a price trend. A future forecast is not available yet.'
-        : 'Historical points represent monthly median asking prices of approved listings. They do not necessarily represent completed property sale prices. No validated future forecast is available yet.',
+      historicalData.length < 3
+        ? 'Current approved listing statistics are available. At least 3 distinct monthly historical snapshots are required for a statistical forecast.'
+        : 'Historical points represent monthly median asking prices of approved listings. They do not necessarily represent completed property sale prices. Future values are statistical projections, not guaranteed valuations.',
   };
 
   return res.status(200).json(

@@ -185,30 +185,80 @@ export const adminService = {
   },
 
   // =========================
+  // Fraud Detection
   // =========================
-// Fraud
-// =========================
-getFraudFlags: async () => {
-  const { data } = await api.get(`${BASE}/fraud/flags`);
-  return data.data;
-},
 
-// =========================
-// Settings
-// =========================
-getSettings: async () => {
-  const { data } = await api.get(`${BASE}/settings`);
-  return data.data;
-},
+  // Get existing fraud flags
+  getFraudFlags: async () => {
+    const { data } = await api.get(`${BASE}/fraud/flags`);
+    return data.data;
+  },
 
-updateSettings: async (updates) => {
-  const { data } = await api.patch(
-    `${BASE}/settings`,
-    updates
-  );
+  // Run AI fraud analysis for a property
+  analyzePropertyFraud: async (propertyId) => {
+    const { data } = await api.post(
+      `${BASE}/fraud/analyze/${propertyId}`
+    );
 
-  return data.data;
-},
+    return data.data;
+  },
+
+  // Get fraud reports with filters and pagination
+  getFraudReports: async ({
+    page = 1,
+    limit = 10,
+    review_status,
+    severity,
+    is_suspicious,
+  } = {}) => {
+    const params = { page, limit };
+
+    if (review_status) {
+      params.review_status = review_status;
+    }
+
+    if (severity) {
+      params.severity = severity;
+    }
+
+    if (is_suspicious !== undefined) {
+      params.is_suspicious = is_suspicious;
+    }
+
+    const { data } = await api.get(
+      `${BASE}/fraud/reports`,
+      { params }
+    );
+
+    return data.data;
+  },
+
+  // Update admin review status and notes
+  reviewFraudReport: async (reportId, reviewData) => {
+    const { data } = await api.patch(
+      `${BASE}/fraud/reports/${reportId}/review`,
+      reviewData
+    );
+
+    return data.data;
+  },
+
+  // =========================
+  // Settings
+  // =========================
+  getSettings: async () => {
+    const { data } = await api.get(`${BASE}/settings`);
+    return data.data;
+  },
+
+  updateSettings: async (updates) => {
+    const { data } = await api.patch(
+      `${BASE}/settings`,
+      updates
+    );
+
+    return data.data;
+  },
 };
 
 export default adminService;

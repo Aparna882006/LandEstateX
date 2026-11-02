@@ -1,0 +1,426 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  FiSearch,
+  FiHeart,
+  FiCalendar,
+  FiTrendingUp,
+  FiMessageCircle,
+  FiRefreshCw,
+  FiImage,
+  FiArrowUpRight,
+} from 'react-icons/fi';
+
+import { useAuth } from '../../hooks/useAuth';
+import Button from '../../components/common/Button';
+import RecommendationCarousel from '../../components/ai/RecommendationCarousel';
+
+import { getMyBookings } from '../../services/appointment.service';
+import { getWishlist } from '../../services/wishlist.service';
+import { getSavedSearches } from '../../services/savedSearch.service';
+
+const QUICK_ACTIONS = [
+  {
+    icon: FiSearch,
+    label: 'Search Properties',
+    description: 'Find your next home or investment',
+    to: '/properties',
+  },
+  {
+    icon: FiHeart,
+    label: 'Wishlist',
+    description: 'View properties you have saved',
+    to: '/wishlist',
+  },
+  {
+    icon: FiCalendar,
+    label: 'Appointments',
+    description: 'Manage your site visits',
+    to: '/my-appointments',
+  },
+  {
+    icon: FiTrendingUp,
+    label: 'Loan & EMI',
+    description: 'Check eligibility and calculate EMI',
+    to: '/loan-calculator',
+  },
+  {
+    icon: FiImage,
+    label: 'Image Valuation',
+    description: 'Upload a property photo and analyse it with AI',
+    to: '/image-valuation',
+  },
+];
+
+const NAV_LINKS = [
+  { label: 'Buy', to: '/properties?purpose=buy' },
+  { label: 'Rent', to: '/properties?purpose=rent' },
+  { label: 'Sell', to: '/properties?purpose=sell' },
+  { label: 'Invest', to: '/properties?purpose=invest' },
+  { label: 'AI Tools', to: '/ai-tools' },
+];
+
+const getAppointmentsFromResponse = (response) => {
+  const body = response?.data?.data ?? response?.data;
+
+  if (Array.isArray(body?.appointments)) {
+    return body.appointments;
+  }
+
+  if (Array.isArray(body?.data?.appointments)) {
+    return body.data.appointments;
+  }
+
+  if (Array.isArray(body)) {
+    return body;
+  }
+
+  return [];
+};
+
+const getWishlistItemsFromResponse = (response) => {
+  const body = response?.data?.data ?? response?.data;
+
+  if (Array.isArray(body?.items)) {
+    return body.items;
+  }
+
+  if (Array.isArray(body?.data?.items)) {
+    return body.data.items;
+  }
+
+  return [];
+};
+
+const getUpcomingVisitsCount = (appointments) => {
+  const now = new Date();
+
+  return appointments.filter((appointment) => {
+    const scheduledAt = new Date(appointment.scheduled_at);
+
+    return (
+      !Number.isNaN(scheduledAt.getTime()) &&
+      scheduledAt >= now &&
+      ['pending', 'confirmed'].includes(appointment.status)
+    );
+  }).length;
+};
+
+const DashboardPage = () => {
+  const { user, logout } = useAuth();
+
+  const [savedProperties, setSavedProperties] = useState(0);
+  const [upcomingVisits, setUpcomingVisits] = useState(0);
+  const [activeSearches, setActiveSearches] = useState(0);
+
+  const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState([]);
+
+  const loadDashboardData = useCallback(async () => {
+    setLoading(true);
+    setErrors([]);
+
+    const nextErrors = [];
+
+    try {
+      const searches = getSavedSearches();
+
+      setActiveSearches(
+        Array.isArray(searches) ? searches.length : 0
+      );
+    } catch (error) {
+      console.error('Failed to load saved searches:', error);
+      nextErrors.push('Saved searches could not be loaded.');
+    }
+
+    const [wishlistResult, appointmentsResult] =
+      await Promise.allSettled([
+        getWishlist(),
+        getMyBookings(),
+      ]);
+
+    if (wishlistResult.status === 'fulfilled') {
+      const items = getWishlistItemsFromResponse(
+        wishlistResult.value
+      );
+
+      setSavedProperties(items.length);
+    } else {
+      console.error(
+        'Failed to load wishlist:',
+        wishlistResult.reason
+      );
+
+      nextErrors.push('Saved properties could not be loaded.');
+    }
+
+    if (appointmentsResult.status === 'fulfilled') {
+      const appointments = getAppointmentsFromResponse(
+        appointmentsResult.value
+      );
+
+      setUpcomingVisits(
+        getUpcomingVisitsCount(appointments)
+      );
+    } else {
+      console.error(
+        'Failed to load appointments:',
+        appointmentsResult.reason
+      );
+
+      nextErrors.push('Upcoming visits could not be loaded.');
+    }
+
+    setErrors(nextErrors);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  const stats = [
+    {
+      label: 'Saved Properties',
+      value: savedProperties,
+      to: '/wishlist',
+    },
+    {
+      label: 'Upcoming Visits',
+      value: upcomingVisits,
+      to: '/my-appointments',
+    },
+    {
+      label: 'Active Searches',
+      value: activeSearches,
+      to: '/saved-searches',
+    },
+    {
+      label: 'Account Status',
+      value: user?.is_verified ? 'Verified' : 'Pending',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-neutral-50">
+      {/* Dashboard Navigation */}
+      <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 py-4 lg:px-6">
+
+          {/* Brand */}
+          <Link
+            to="/"
+            className="flex shrink-0 items-center gap-2"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-700 text-lg font-bold text-white">
+              X
+            </span>
+
+            <span className="text-lg font-bold tracking-tight text-neutral-900">
+              LandEstateX
+            </span>
+          </Link>
+
+          {/* Main Navigation */}
+          <nav className="order-3 flex w-full flex-wrap items-center justify-center gap-x-6 gap-y-3 border-t border-neutral-100 pt-3 text-sm font-semibold text-neutral-700 md:order-2 md:w-auto md:border-0 md:pt-0">
+            {NAV_LINKS.map((item) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                className="whitespace-nowrap transition-colors duration-200 hover:text-primary-700"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* User Actions */}
+          <div className="ml-auto flex shrink-0 items-center gap-3 md:order-3">
+            <span className="hidden text-sm text-neutral-500 sm:inline">
+              Hi,{' '}
+              <span className="font-semibold text-neutral-900">
+                {user?.full_name || 'User'}
+              </span>
+            </span>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={logout}
+            >
+              Log Out
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-5 py-10 lg:px-6">
+
+        {/* Welcome Section */}
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="mb-2 text-sm font-semibold text-primary-700">
+              YOUR PERSONAL DASHBOARD
+            </p>
+
+            <h1 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl">
+              Welcome back,{' '}
+              {user?.full_name?.split(' ')[0] || 'User'} 👋
+            </h1>
+
+            <p className="mt-2 text-sm text-neutral-500">
+              Here's what's happening with your property journey.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadDashboardData}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-primary-300 hover:bg-neutral-50 disabled:opacity-60"
+          >
+            <FiRefreshCw
+              className={loading ? 'animate-spin' : ''}
+            />
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+
+        {/* Error Messages */}
+        {errors.length > 0 && (
+          <div
+            role="alert"
+            className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"
+          >
+            <p className="font-semibold">
+              Some dashboard information could not be loaded.
+            </p>
+
+            <ul className="mt-2 list-inside list-disc">
+              {errors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+
+            <button
+              type="button"
+              onClick={loadDashboardData}
+              className="mt-3 font-semibold underline"
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* Dashboard Statistics */}
+        <section className="mb-10">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {stats.map((stat) => {
+              const content = (
+                <div className="flex flex-col items-center">
+                  <p className="text-2xl font-bold text-primary-700">
+                    {loading && typeof stat.value === 'number'
+                      ? '...'
+                      : stat.value}
+                  </p>
+
+                  <p className="mt-2 text-xs font-medium text-neutral-500 sm:text-sm">
+                    {stat.label}
+                  </p>
+                </div>
+              );
+
+              return stat.to ? (
+                <Link
+                  key={stat.label}
+                  to={stat.to}
+                  className="rounded-xl border border-neutral-200 bg-white p-5 text-center shadow-sm transition hover:-translate-y-1 hover:border-primary-300 hover:shadow-md"
+                >
+                  {content}
+                </Link>
+              ) : (
+                <div
+                  key={stat.label}
+                  className="rounded-xl border border-neutral-200 bg-white p-5 text-center shadow-sm"
+                >
+                  {content}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Quick Actions */}
+        <section className="mb-10">
+          <div className="mb-5">
+            <h2 className="text-xl font-bold text-neutral-900">
+              Quick Actions
+            </h2>
+
+            <p className="mt-1 text-sm text-neutral-500">
+              Access your frequently used property services.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {QUICK_ACTIONS.map((action) => {
+              const Icon = action.icon;
+
+              return (
+                <Link
+                  key={action.label}
+                  to={action.to}
+                  className="group rounded-xl border border-neutral-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary-300 hover:shadow-md"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary-100 text-primary-700 transition-colors group-hover:bg-primary-700 group-hover:text-white">
+                      <Icon size={20} />
+                    </div>
+
+                    <FiArrowUpRight
+                      className="text-neutral-300 transition-colors group-hover:text-primary-700"
+                      size={19}
+                    />
+                  </div>
+
+                  <h3 className="mt-4 text-sm font-bold text-neutral-900">
+                    {action.label}
+                  </h3>
+
+                  <p className="mt-1 text-xs leading-5 text-neutral-500">
+                    {action.description}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* AI Property Recommendations */}
+        <section className="mt-8">
+          <RecommendationCarousel />
+        </section>
+
+        {/* AI Assistant Information */}
+        <section className="mt-10 flex items-start gap-4 rounded-xl border border-primary-100 bg-primary-100/40 p-5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-primary-700 shadow-sm">
+            <FiMessageCircle size={21} />
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-neutral-900">
+              Need help with your property journey?
+            </h3>
+
+            <p className="mt-1 text-sm leading-6 text-neutral-600">
+              Ask our AI assistant about price checks, EMI calculations
+              and property recommendations using the chat icon.
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+};
+
+export default DashboardPage;

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -8,10 +7,13 @@ import {
   FiTrendingUp,
   FiMessageCircle,
   FiRefreshCw,
+  FiImage,
 } from 'react-icons/fi';
 
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/common/Button';
+import RecommendationCarousel from '../../components/ai/RecommendationCarousel';
+
 import { getMyBookings } from '../../services/appointment.service';
 import { getWishlist } from '../../services/wishlist.service';
 import { getSavedSearches } from '../../services/savedSearch.service';
@@ -40,6 +42,12 @@ const QUICK_ACTIONS = [
     label: 'Loan & EMI',
     description: 'Check eligibility and calculate EMI',
     to: '/loan-calculator',
+  },
+  {
+    icon: FiImage,
+    label: 'Image Valuation',
+    description: 'Upload a property photo and analyse it with AI',
+    to: '/image-valuation',
   },
 ];
 
@@ -105,7 +113,6 @@ const DashboardPage = () => {
 
     const nextErrors = [];
 
-    // Load saved searches from localStorage
     try {
       const searches = getSavedSearches();
 
@@ -117,7 +124,6 @@ const DashboardPage = () => {
       nextErrors.push('Saved searches could not be loaded.');
     }
 
-    // Load wishlist and appointments
     const [wishlistResult, appointmentsResult] =
       await Promise.allSettled([
         getWishlist(),
@@ -164,7 +170,6 @@ const DashboardPage = () => {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  // Active Searches now opens Saved Searches page
   const stats = [
     {
       label: 'Saved Properties',
@@ -189,10 +194,17 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-neutral-0">
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-700 text-lg font-bold text-white">
+
+      {/* Dashboard Header */}
+      <header className="sticky top-0 z-50 border-b border-neutral-200 bg-white">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-4 px-6 py-4 lg:grid-cols-[1fr_auto_1fr]">
+
+          {/* Logo */}
+          <Link
+            to="/"
+            className="flex items-center gap-2 justify-self-start"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-700 text-lg font-bold text-white">
               X
             </span>
 
@@ -201,8 +213,50 @@ const DashboardPage = () => {
             </span>
           </Link>
 
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-neutral-500">
+          {/* Main Navigation */}
+          <nav className="flex flex-wrap items-center justify-center gap-5 lg:gap-8">
+
+            <Link
+              to="/properties?purpose=buy"
+              className="text-sm font-medium text-neutral-700 transition hover:text-primary-700"
+            >
+              Buy
+            </Link>
+
+            <Link
+              to="/properties?purpose=rent"
+              className="text-sm font-medium text-neutral-700 transition hover:text-primary-700"
+            >
+              Rent
+            </Link>
+
+            <Link
+              to="/properties?purpose=sell"
+              className="text-sm font-medium text-neutral-700 transition hover:text-primary-700"
+            >
+              Sell
+            </Link>
+
+            <Link
+              to="/properties?purpose=invest"
+              className="text-sm font-medium text-neutral-700 transition hover:text-primary-700"
+            >
+              Invest
+            </Link>
+
+            <Link
+              to="/ai-tools"
+              className="text-sm font-medium text-neutral-700 transition hover:text-primary-700"
+            >
+              AI Tools
+            </Link>
+
+          </nav>
+
+          {/* User Greeting and Logout */}
+          <div className="flex items-center justify-end gap-4">
+
+            <span className="hidden text-sm text-neutral-500 xl:inline">
               Hi,{' '}
               <span className="font-medium text-neutral-900">
                 {user?.full_name || 'User'}
@@ -216,11 +270,13 @@ const DashboardPage = () => {
             >
               Log Out
             </Button>
+
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-6 py-10">
+
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-neutral-900">
@@ -321,7 +377,7 @@ const DashboardPage = () => {
                 <Link
                   key={action.label}
                   to={action.to}
-                  className="group rounded-lg border border-neutral-200 bg-white p-5 transition hover:-translate-y-1 hover:shadow-md"
+                  className="group rounded-lg border border-neutral-200 bg-white p-5 transition hover:-translate-y-1 hover:border-primary-300 hover:shadow-md"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary-100 text-primary-700 transition group-hover:bg-primary-700 group-hover:text-white">
                     <Icon size={18} />
@@ -340,31 +396,9 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Recommendations */}
-        <div className="rounded-lg border border-dashed border-neutral-200 bg-white p-10 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 text-primary-700">
-            <FiSearch size={20} />
-          </div>
-
-          <h3 className="mt-4 text-sm font-semibold text-neutral-900">
-            No recommendations yet
-          </h3>
-
-          <p className="mx-auto mt-1 max-w-sm text-xs text-neutral-500">
-            Start searching for properties to get personalized AI
-            recommendations here.
-          </p>
-
-          <div className="mt-4">
-            <Button
-              as={Link}
-              to="/properties"
-              variant="primary"
-              size="sm"
-            >
-              Start Exploring Properties
-            </Button>
-          </div>
+        {/* AI Property Recommendations */}
+        <div className="mt-6">
+          <RecommendationCarousel />
         </div>
 
         {/* AI assistant information */}
@@ -380,6 +414,7 @@ const DashboardPage = () => {
             recommendations.
           </p>
         </div>
+
       </main>
     </div>
   );

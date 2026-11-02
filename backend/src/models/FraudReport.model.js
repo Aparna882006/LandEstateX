@@ -1,0 +1,137 @@
+
+const mongoose = require('mongoose');
+
+const fraudSignalSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    points: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100,
+    },
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 1000,
+    },
+  },
+  { _id: false }
+);
+
+const fraudReportSchema = new mongoose.Schema(
+  {
+    property_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Property',
+      required: true,
+      index: true,
+    },
+
+    owner_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+
+    risk_score: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100,
+    },
+
+    severity: {
+      type: String,
+      enum: ['low', 'medium', 'high'],
+      required: true,
+    },
+
+    is_suspicious: {
+      type: Boolean,
+      default: false,
+    },
+
+    signals: {
+      type: [fraudSignalSchema],
+      default: [],
+    },
+
+    price_deviation_percent: {
+      type: Number,
+      default: null,
+      min: 0,
+    },
+
+    recommendation: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+    },
+
+    engine: {
+      type: String,
+      default: 'landestatex_explainable_fraud_rules',
+    },
+
+    data_quality: {
+      type: String,
+      default: 'rule_based_heuristic',
+    },
+
+    disclaimer: {
+      type: String,
+      default: 'Automated risk assessment is not proof of fraud. Admin review is required.',
+    },
+
+    review_status: {
+      type: String,
+      enum: ['pending', 'reviewed', 'confirmed', 'dismissed'],
+      default: 'pending',
+      index: true,
+    },
+
+    reviewed_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+
+    reviewed_at: {
+      type: Date,
+      default: null,
+    },
+
+    admin_notes: {
+      type: String,
+      trim: true,
+      maxlength: 2000,
+      default: '',
+    },
+  },
+  {
+    timestamps: {
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    },
+  }
+);
+
+fraudReportSchema.index({
+  property_id: 1,
+  created_at: -1,
+});
+
+fraudReportSchema.index({
+  review_status: 1,
+  severity: 1,
+  created_at: -1,
+});
+
+module.exports = mongoose.model('FraudReport', fraudReportSchema);

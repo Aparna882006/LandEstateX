@@ -1,11 +1,42 @@
 
+const mongoose = require('mongoose');
+
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
+
+const Property = require('../models/Property.model');
+const { cloudinary } = require('../config/cloudinary');
+
 const {
   predictPropertyPrice,
+  getPropertyRecommendations,
+  analysePropertyImage,
+  chatWithPropertyAssistant,
+  analysePropertyInvestment,
 } = require('../services/aiGateway.service');
 
+// ---------------------------------------------
+// HELPER: CLEANUP CLOUDINARY UPLOAD
+// ---------------------------------------------
+const cleanupUploadedImage = async (file) => {
+  if (!file?.filename) {
+    return;
+  }
+
+  try {
+    await cloudinary.uploader.destroy(file.filename);
+  } catch (error) {
+    console.error(
+      'Cloudinary cleanup failed:',
+      error.message
+    );
+  }
+};
+
+// ---------------------------------------------
+// PRICE PREDICTION
+// ---------------------------------------------
 const predictPrice = asyncHandler(async (req, res) => {
   const {
     property_type,
@@ -51,7 +82,10 @@ const predictPrice = asyncHandler(async (req, res) => {
   }
 
   if (area_sqft <= 0) {
-    throw new ApiError(400, 'area_sqft must be greater than zero.');
+    throw new ApiError(
+      400,
+      'area_sqft must be greater than zero.'
+    );
   }
 
   const prediction = await predictPropertyPrice({
@@ -73,4 +107,504 @@ const predictPrice = asyncHandler(async (req, res) => {
   );
 });
 
-module.exports = { predictPrice };
+// ---------------------------------------------
+// PROPERTY RECOMMENDATIONS
+// ---------------------------------------------
+const recommendProperties = asyncHandler(async (req, res) => {
+  if (req.user?.role !== 'buyer') {
+    throw new ApiError(
+      403,
+      'Only buyers can access personalized recommendations.'
+    );
+  }
+
+  const { preferences } = req.body;
+
+  if (!Array.isArray(preferences)) {
+    throw new ApiError(
+      400,
+      'preferences must be an array.'
+    );
+  }
+
+  if (preferences.length > 20) {
+    throw new ApiError(
+      400,
+      'A maximum of 20 saved searches can be submitted.'
+    );
+  }
+
+  if (preferences.length === 0) {
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        'Save a property search to receive personalized recommendations.',
+        {
+          recommendations: [],
+          data_quality: 'preference_based_ranking',
+        }
+      )
+    );
+  }
+
+  const properties = await Property.find({
+    status: 'approved',
+    is_fraud_flagged: { $ne: true },
+    price: { $gt: 0 },
+    area_sqft: { $gt: 0 },
+  })
+    .select(
+      'title description property_type listing_type price area_sqft bedrooms bathrooms location amenities images created_at'
+    )
+    .sort({ created_at: -1 })
+    .limit(100)
+    .lean();
+
+  if (properties.length === 0) {
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        'No approved properties are currently available.',
+        {
+          recommendations: [],
+          data_quality: 'preference_based_ranking',
+        }
+      )
+    );
+  }
+
+  const candidates = properties.map((property) => ({
+    id: property._id.toString(),
+    city: property.location?.city || '',
+    locality: property.location?.locality || '',
+    address: property.location?.address || '',
+    property_type: property.property_type,
+    listing_type: property.listing_type,
+    price: property.price,
+    area_sqft: property.area_sqft,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    amenities: property.amenities || [],
+  }));
+
+  const aiResult = await getPropertyRecommendations(
+    preferences,
+    candidates
+  );
+
+  const rankedItems = Array.isArray(aiResult?.recommendations)
+    ? aiResult.recommendations
+    : [];
+
+  const propertyMap = new Map(
+    properties.map((property) => [
+      property._id.toString(),
+      property,
+    ])
+  );
+
+  const recommendations = rankedItems
+    .map((item) => {
+      const property = propertyMap.get(item.property_id);
+
+      if (!property) {
+        return null;
+      }
+
+      return {
+        property,
+        match_score: item.match_score,
+        match_reasons: item.match_reasons || [],
+      };
+    })
+    .filter(Boolean);
+
+  return res.status(200).json(
+    new ApiResponse(
+      true,
+      'Personalized property recommendations generated.',
+      {
+        recommendations,
+        data_quality:
+          aiResult?.data_quality || 'preference_based_ranking',
+        engine:
+          aiResult?.engine || 'rule_based_preference_scoring',
+      }
+    )
+  );
+});
+
+// ---------------------------------------------
+// IMAGE VALUATION
+// ---------------------------------------------
+const imageValuation = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new ApiError(
+      400,
+      'Please upload a property image.'
+    );
+  }
+
+  const {
+    property_type,
+    listing_type,
+    area_sqft,
+    bedrooms,
+    bathrooms,
+    city,
+    locality = '',
+  } = req.body;
+
+  const numericArea = Number(area_sqft);
+  const numericBedrooms = Number(bedrooms ?? 0);
+  const numericBathrooms = Number(bathrooms ?? 0);
+
+  const validPropertyTypes = [
+    'apartment',
+    'villa',
+    'plot',
+    'commercial',
+  ];
+
+  const validListingTypes = ['sale', 'rent'];
+
+  if (
+    !validPropertyTypes.includes(
+      String(property_type || '').trim().toLowerCase()
+    ) ||
+    !validListingTypes.includes(
+      String(listing_type || '').trim().toLowerCase()
+    ) ||
+    !city ||
+    !String(city).trim()
+  ) {
+    await cleanupUploadedImage(req.file);
+
+    throw new ApiError(
+      400,
+      'Please provide valid property_type, listing_type and city.'
+    );
+  }
+
+  if (
+    !Number.isFinite(numericArea) ||
+    numericArea <= 0 ||
+    !Number.isInteger(numericBedrooms) ||
+    numericBedrooms < 0 ||
+    !Number.isInteger(numericBathrooms) ||
+    numericBathrooms < 0
+  ) {
+    await cleanupUploadedImage(req.file);
+
+    throw new ApiError(
+      400,
+      'Please provide valid area, bedrooms and bathrooms.'
+    );
+  }
+
+  if (!req.file.path) {
+    await cleanupUploadedImage(req.file);
+
+    throw new ApiError(
+      500,
+      'Image upload did not return a valid Cloudinary URL.'
+    );
+  }
+
+  try {
+    const result = await analysePropertyImage({
+      image_url: req.file.path,
+      property_type: String(property_type).trim().toLowerCase(),
+      listing_type: String(listing_type).trim().toLowerCase(),
+      area_sqft: numericArea,
+      bedrooms: numericBedrooms,
+      bathrooms: numericBathrooms,
+      city: String(city).trim(),
+      locality: String(locality).trim(),
+    });
+
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        'Property image analysed successfully.',
+        {
+          ...result,
+          uploaded_image: req.file.path,
+        }
+      )
+    );
+  } catch (error) {
+    await cleanupUploadedImage(req.file);
+    throw error;
+  }
+});
+
+// ---------------------------------------------
+// PROPERTY CHATBOT
+// ---------------------------------------------
+const chatWithAssistant = asyncHandler(async (req, res) => {
+  const { message, conversation_history = [] } = req.body;
+
+  if (
+    typeof message !== 'string' ||
+    !message.trim()
+  ) {
+    throw new ApiError(
+      400,
+      'Please enter a valid chatbot message.'
+    );
+  }
+
+  if (message.trim().length > 2000) {
+    throw new ApiError(
+      400,
+      'Chatbot message cannot exceed 2000 characters.'
+    );
+  }
+
+  if (!Array.isArray(conversation_history)) {
+    throw new ApiError(
+      400,
+      'conversation_history must be an array.'
+    );
+  }
+
+  if (conversation_history.length > 20) {
+    throw new ApiError(
+      400,
+      'A maximum of 20 previous messages is allowed.'
+    );
+  }
+
+  const validHistory = conversation_history.map((item) => {
+    if (
+      !item ||
+      !['user', 'assistant'].includes(item.role) ||
+      typeof item.content !== 'string' ||
+      !item.content.trim() ||
+      item.content.length > 2000
+    ) {
+      throw new ApiError(
+        400,
+        'Invalid conversation history.'
+      );
+    }
+
+    return {
+      role: item.role,
+      content: item.content.trim(),
+    };
+  });
+
+  const properties = await Property.find({
+    status: 'approved',
+    is_fraud_flagged: { $ne: true },
+    price: { $gt: 0 },
+    area_sqft: { $gt: 0 },
+  })
+    .select(
+      'title description property_type listing_type price area_sqft bedrooms bathrooms location amenities images created_at'
+    )
+    .sort({ created_at: -1 })
+    .limit(100)
+    .lean();
+
+  const propertyCandidates = properties.map((property) => ({
+    id: property._id.toString(),
+    title: property.title,
+    description: property.description,
+    property_type: property.property_type,
+    listing_type: property.listing_type,
+    price: property.price,
+    area_sqft: property.area_sqft,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    city: property.location?.city || '',
+    locality: property.location?.locality || '',
+    address: property.location?.address || '',
+    amenities: property.amenities || [],
+    images: (property.images || []).map((image) => ({
+      url: image.url,
+      is_primary: image.is_primary,
+    })),
+  }));
+
+  const aiResult = await chatWithPropertyAssistant(
+    message.trim(),
+    validHistory,
+    propertyCandidates
+  );
+
+  return res.status(200).json(
+    new ApiResponse(
+      true,
+      'Chatbot response generated successfully.',
+      {
+        reply: aiResult?.reply || 'Sorry, I could not generate a response.',
+        suggested_questions:
+          aiResult?.suggested_questions || [],
+        recommendations:
+          aiResult?.recommendations || [],
+        data_quality:
+          aiResult?.data_quality || 'approved_listing_context',
+        engine:
+          aiResult?.engine || 'rule_based_property_chatbot',
+      }
+    )
+  );
+});
+
+// ---------------------------------------------
+// AI INVESTMENT ANALYTICS
+// ---------------------------------------------
+const runPropertyInvestmentAnalysis = asyncHandler(
+  async (req, res) => {
+    const { propertyId } = req.params;
+
+    const {
+      monthly_rent,
+      annual_expenses,
+      annual_appreciation_percent = 0,
+      holding_period_years = 5,
+    } = req.body;
+
+    // Validate MongoDB property ID.
+    if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+      throw new ApiError(
+        400,
+        'Invalid property ID.'
+      );
+    }
+
+    // Validate monthly rent.
+    if (
+      typeof monthly_rent !== 'number' ||
+      !Number.isFinite(monthly_rent) ||
+      monthly_rent < 0
+    ) {
+      throw new ApiError(
+        400,
+        'monthly_rent must be a valid non-negative number.'
+      );
+    }
+
+    // Validate annual expenses.
+    if (
+      typeof annual_expenses !== 'number' ||
+      !Number.isFinite(annual_expenses) ||
+      annual_expenses < 0
+    ) {
+      throw new ApiError(
+        400,
+        'annual_expenses must be a valid non-negative number.'
+      );
+    }
+
+    // Validate appreciation assumption.
+    if (
+      typeof annual_appreciation_percent !== 'number' ||
+      !Number.isFinite(annual_appreciation_percent) ||
+      annual_appreciation_percent < -20 ||
+      annual_appreciation_percent > 30
+    ) {
+      throw new ApiError(
+        400,
+        'annual_appreciation_percent must be between -20 and 30.'
+      );
+    }
+
+    // Validate holding period.
+    if (
+      typeof holding_period_years !== 'number' ||
+      !Number.isInteger(holding_period_years) ||
+      holding_period_years < 1 ||
+      holding_period_years > 30
+    ) {
+      throw new ApiError(
+        400,
+        'holding_period_years must be an integer between 1 and 30.'
+      );
+    }
+
+    // Fetch the actual property from MongoDB.
+    // Never trust purchase price or area sent by the frontend.
+    const property = await Property.findOne({
+      _id: propertyId,
+      status: 'approved',
+      listing_type: 'sale',
+      is_fraud_flagged: { $ne: true },
+      price: { $gt: 0 },
+      area_sqft: { $gt: 0 },
+    })
+      .select(
+        '_id title price area_sqft property_type listing_type location'
+      )
+      .lean();
+
+    if (!property) {
+      throw new ApiError(
+        404,
+        'Approved sale property not found or unavailable for investment analysis.'
+      );
+    }
+
+    // Prepare trusted property data and user assumptions.
+    const investmentPayload = {
+      property_id: property._id.toString(),
+      purchase_price: property.price,
+      area_sqft: property.area_sqft,
+      monthly_rent,
+      annual_expenses,
+      annual_appreciation_percent,
+      holding_period_years,
+    };
+
+    // Call FastAPI Investment Analytics.
+    const aiResult = await analysePropertyInvestment(
+      investmentPayload
+    );
+
+    if (
+      !aiResult ||
+      aiResult.success !== true ||
+      !aiResult.data
+    ) {
+      throw new ApiError(
+        502,
+        aiResult?.message ||
+          'Investment analytics service returned an invalid response.'
+      );
+    }
+
+    return res.status(200).json(
+      new ApiResponse(
+        true,
+        'Property investment analysis generated successfully.',
+        {
+          property: {
+            id: property._id,
+            title: property.title,
+            property_type: property.property_type,
+            listing_type: property.listing_type,
+            purchase_price: property.price,
+            area_sqft: property.area_sqft,
+            city: property.location?.city || '',
+            locality: property.location?.locality || '',
+          },
+          analysis: aiResult.data,
+        }
+      )
+    );
+  }
+);
+
+// ---------------------------------------------
+// EXPORT CONTROLLERS
+// ---------------------------------------------
+module.exports = {
+  predictPrice,
+  recommendProperties,
+  imageValuation,
+  chatWithAssistant,
+  runPropertyInvestmentAnalysis,
+};

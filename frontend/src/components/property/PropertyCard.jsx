@@ -2,7 +2,12 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
-import { FiHeart, FiMapPin, FiBarChart2 } from 'react-icons/fi';
+import {
+  FiHeart,
+  FiMapPin,
+  FiBarChart2,
+  FiHome,
+} from 'react-icons/fi';
 
 import Badge from '../common/Badge';
 
@@ -22,22 +27,40 @@ const formatPropertyPrice = (price, listingType) => {
     return 'Price on request';
   }
 
-  // Monthly rent
   if (listingType === 'rent') {
     return `₹${amount.toLocaleString('en-IN')}/month`;
   }
 
-  // Crore
   if (amount >= 10000000) {
     return `₹${Number((amount / 10000000).toFixed(2))} Cr`;
   }
 
-  // Lakh
   if (amount >= 100000) {
     return `₹${Number((amount / 100000).toFixed(2))} Lakh`;
   }
 
   return `₹${amount.toLocaleString('en-IN')}`;
+};
+
+// Get readable property type
+const getPropertyTypeLabel = (type) => {
+  const normalizedType = String(type || '')
+    .trim()
+    .toLowerCase();
+
+  const labels = {
+    apartment: 'Apartment',
+    flat: 'Apartment',
+    villa: 'Villa',
+    plot: 'Residential Plot',
+    land: 'Residential Plot',
+    commercial: 'Commercial Property',
+    office: 'Commercial Property',
+    house: 'House',
+    independent_house: 'Independent House',
+  };
+
+  return labels[normalizedType] || 'Property';
 };
 
 const PropertyCard = ({
@@ -57,15 +80,21 @@ const PropertyCard = ({
     setIsWishlisted(initialWishlisted);
   }, [initialWishlisted]);
 
-  // Property price
+  // Property information
   const price = Number(property?.price) || 0;
+
+  const propertyType =
+    property?.property_type || property?.type || 'Property';
+
+  const propertyTypeLabel = getPropertyTypeLabel(propertyType);
+
+  const listingType = property?.listing_type || 'sale';
 
   // AI predicted price
   const aiPrice = Number(
     property?.ai_predicted_price || property?.aiPredictedPrice
   );
 
-  // Difference between actual price and AI price
   const priceGapPct =
     aiPrice > 0
       ? Math.round(((price - aiPrice) / aiPrice) * 100)
@@ -73,12 +102,17 @@ const PropertyCard = ({
 
   const isFairPriced = priceGapPct <= 2;
 
-  // Get primary property image
+  // Select primary property image
   const primaryImage =
-    property?.images?.find((img) => img.is_primary)?.url ||
-    property?.images?.[0]?.url ||
+    property?.images?.find((img) => img.is_primary && img.url)?.url ||
+    property?.images?.find((img) => img.url)?.url ||
     property?.image ||
-    'https://picsum.photos/seed/property-placeholder/600/400';
+    '';
+
+  // Reset image error when property image changes
+  useEffect(() => {
+    setImageError(false);
+  }, [primaryImage]);
 
   // Wishlist handler
   const handleWishlistClick = async (event) => {
@@ -143,18 +177,13 @@ const PropertyCard = ({
       ? property?.location?.city
       : property?.location;
 
-  // Property type
-  const propertyType =
-    property?.property_type || property?.type || 'Property';
-
-  // Listing type
-  const listingType = property?.listing_type || 'sale';
-
-  // Bedrooms and area
+  // Property features
   const bedrooms = property?.bedrooms ?? property?.bhk ?? '—';
 
   const area =
     property?.area_sqft || property?.area || '—';
+
+  const showPlaceholder = !primaryImage || imageError;
 
   return (
     <Link
@@ -163,17 +192,37 @@ const PropertyCard = ({
     >
       {/* Property Image */}
       <div className="relative h-48 overflow-hidden bg-neutral-100">
-        <img
-          src={
-            imageError
-              ? 'https://picsum.photos/seed/property-fallback/600/400'
-              : primaryImage
-          }
-          alt={property?.title || 'Property'}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-          onError={() => setImageError(true)}
-        />
+
+        {showPlaceholder ? (
+          // Property-specific placeholder
+          <div
+            className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-slate-100 via-neutral-100 to-slate-200 text-neutral-500"
+            role="img"
+            aria-label={`${propertyTypeLabel} image unavailable`}
+          >
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
+              <FiHome size={32} className="text-primary-700" />
+            </div>
+
+            <div className="text-center">
+              <p className="text-sm font-semibold text-neutral-700">
+                {propertyTypeLabel}
+              </p>
+
+              <p className="mt-1 text-xs text-neutral-500">
+                Photo unavailable
+              </p>
+            </div>
+          </div>
+        ) : (
+          <img
+            src={primaryImage}
+            alt={property?.title || propertyTypeLabel}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
+        )}
 
         {/* Wishlist Button */}
         <button
@@ -238,6 +287,7 @@ const PropertyCard = ({
 
       {/* Property Details */}
       <div className="p-4">
+
         {/* Price and Property Type */}
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-lg font-semibold text-neutral-900">
@@ -286,4 +336,3 @@ PropertyCard.propTypes = {
 };
 
 export default PropertyCard;
-

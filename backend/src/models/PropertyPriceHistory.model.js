@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 
 const propertyPriceHistorySchema = new mongoose.Schema(
@@ -5,57 +6,71 @@ const propertyPriceHistorySchema = new mongoose.Schema(
     month: {
       type: String,
       required: true,
-      match: /^\d{4}-\d{2}$/,
+      match: /^\d{4}-(0[1-9]|1[0-2])$/,
     },
+
     captured_at: {
       type: Date,
       required: true,
+      default: Date.now,
     },
+
     city: {
       type: String,
       required: true,
       trim: true,
     },
+
     city_key: {
       type: String,
       required: true,
       trim: true,
+      lowercase: true,
     },
+
     locality: {
       type: String,
       default: '',
       trim: true,
     },
+
     locality_key: {
       type: String,
       default: '',
       trim: true,
+      lowercase: true,
     },
+
     property_type: {
       type: String,
-      enum: ['apartment', 'villa', 'plot', 'commercial'],
       required: true,
+      enum: ['apartment', 'villa', 'plot', 'commercial'],
     },
+
     listing_type: {
       type: String,
-      enum: ['sale', 'rent'],
       required: true,
+      enum: ['sale', 'rent'],
     },
+
     sample_count: {
       type: Number,
       required: true,
       min: 1,
     },
+
     average_price: {
       type: Number,
       required: true,
       min: 0,
     },
+
     median_price: {
       type: Number,
       required: true,
       min: 0,
     },
+
     median_price_per_sqft: {
       type: Number,
       default: null,
@@ -63,10 +78,14 @@ const propertyPriceHistorySchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true,
+    timestamps: {
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    },
   }
 );
 
+// One snapshot per month for each market segment.
 propertyPriceHistorySchema.index(
   {
     month: 1,
@@ -80,6 +99,7 @@ propertyPriceHistorySchema.index(
   }
 );
 
+// Efficient historical market lookups.
 propertyPriceHistorySchema.index({
   city_key: 1,
   locality_key: 1,

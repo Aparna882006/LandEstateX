@@ -1,14 +1,17 @@
 
 import traceback
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.security import verify_internal_api_key
 from app.services.price_model import predict_property_price
+
 
 router = APIRouter(
     prefix="/api/price-prediction",
     tags=["Price Prediction"],
+    dependencies=[Depends(verify_internal_api_key)],
 )
 
 
@@ -25,26 +28,32 @@ class PropertyDetails(BaseModel):
     @classmethod
     def validate_property_type(cls, value: str) -> str:
         value = value.strip().lower()
+
         if value not in {"apartment", "villa", "plot", "commercial"}:
             raise ValueError(
                 "property_type must be apartment, villa, plot, or commercial"
             )
+
         return value
 
     @field_validator("listing_type")
     @classmethod
     def validate_listing_type(cls, value: str) -> str:
         value = value.strip().lower()
+
         if value not in {"sale", "rent"}:
             raise ValueError("listing_type must be sale or rent")
+
         return value
 
     @field_validator("city")
     @classmethod
     def clean_city(cls, value: str) -> str:
         value = value.strip()
+
         if not value:
             raise ValueError("city cannot be empty")
+
         return value
 
     @field_validator("locality")

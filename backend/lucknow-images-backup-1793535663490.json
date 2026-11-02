@@ -1,0 +1,1082 @@
+[
+  {
+    "_id": "6ade14e7da2789d8b542ed27",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Office Space in Gomti Nagar",
+    "description": "Commercial office space in a business district.",
+    "property_type": "commercial",
+    "listing_type": "rent",
+    "price": 45000,
+    "ai_predicted_price": null,
+    "area_sqft": 1400,
+    "bedrooms": 0,
+    "bathrooms": 2,
+    "location": {
+      "address": "Vibhuti Khand, Gomti Nagar, Lucknow",
+      "city": "Lucknow",
+      "locality": "Gomti Nagar",
+      "latitude": 26.8557,
+      "longitude": 80.9552
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-commercial-10/800/600",
+        "public_id": "landestatex-demo-10",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846bfe"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 2,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.637Z",
+    "updated_at": "2026-11-01T11:33:29.434Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed3f",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Plot in Deva Road",
+    "description": "Land parcel for residential development.",
+    "property_type": "plot",
+    "listing_type": "sale",
+    "price": 1700000,
+    "ai_predicted_price": null,
+    "area_sqft": 800,
+    "bedrooms": 0,
+    "bathrooms": 0,
+    "location": {
+      "address": "Deva Road, Lucknow",
+      "city": "Lucknow",
+      "locality": "Deva Road",
+      "latitude": 26.8677,
+      "longitude": 80.9672
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-plot-22/800/600",
+        "public_id": "landestatex-demo-22",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c5e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 3,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-11-01T11:16:28.007Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed2f",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Retail Shop in Aminabad",
+    "description": "Retail space in a busy commercial market.",
+    "property_type": "commercial",
+    "listing_type": "sale",
+    "price": 6000000,
+    "ai_predicted_price": null,
+    "area_sqft": 700,
+    "bedrooms": 0,
+    "bathrooms": 1,
+    "location": {
+      "address": "Aminabad Market, Lucknow",
+      "city": "Lucknow",
+      "locality": "Aminabad",
+      "latitude": 26.8597,
+      "longitude": 80.95920000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-commercial-14/800/600",
+        "public_id": "landestatex-demo-14",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846c1e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-10-25T15:43:07.816Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed37",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Plot in Kursi Road",
+    "description": "Residential plot for future construction.",
+    "property_type": "plot",
+    "listing_type": "sale",
+    "price": 1900000,
+    "ai_predicted_price": null,
+    "area_sqft": 900,
+    "bedrooms": 0,
+    "bathrooms": 0,
+    "location": {
+      "address": "Kursi Road, Lucknow",
+      "city": "Lucknow",
+      "locality": "Kursi Road",
+      "latitude": 26.863699999999998,
+      "longitude": 80.9632
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-plot-18/800/600",
+        "public_id": "landestatex-demo-18",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c3e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 4,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-11-01T11:14:39.306Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed39",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Commercial Office in Vibhuti Khand",
+    "description": "Office space in a prominent business area.",
+    "property_type": "commercial",
+    "listing_type": "rent",
+    "price": 55000,
+    "ai_predicted_price": null,
+    "area_sqft": 1600,
+    "bedrooms": 0,
+    "bathrooms": 2,
+    "location": {
+      "address": "Vibhuti Khand, Gomti Nagar, Lucknow",
+      "city": "Lucknow",
+      "locality": "Vibhuti Khand",
+      "latitude": 26.8647,
+      "longitude": 80.9642
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-commercial-19/800/600",
+        "public_id": "landestatex-demo-19",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c46"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-10-25T15:43:08.208Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed41",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Commercial Shop in Bhootnath Market",
+    "description": "Shop space in a local commercial market.",
+    "property_type": "commercial",
+    "listing_type": "sale",
+    "price": 4800000,
+    "ai_predicted_price": null,
+    "area_sqft": 600,
+    "bedrooms": 0,
+    "bathrooms": 1,
+    "location": {
+      "address": "Bhootnath Market, Indira Nagar, Lucknow",
+      "city": "Lucknow",
+      "locality": "Indira Nagar",
+      "latitude": 26.868699999999997,
+      "longitude": 80.96820000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-commercial-23/800/600",
+        "public_id": "landestatex-demo-23",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c66"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-10-25T15:43:08.514Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed31",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "2 BHK Apartment for Rent in Vikas Nagar",
+    "description": "Comfortable apartment with nearby daily necessities.",
+    "property_type": "apartment",
+    "listing_type": "rent",
+    "price": 16000,
+    "ai_predicted_price": null,
+    "area_sqft": 1050,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "location": {
+      "address": "Sector 4, Vikas Nagar, Lucknow",
+      "city": "Lucknow",
+      "locality": "Vikas Nagar",
+      "latitude": 26.860699999999998,
+      "longitude": 80.9602
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-15/800/600",
+        "public_id": "landestatex-demo-15",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846c26"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-10-25T15:43:07.896Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed43",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "1 BHK Apartment for Rent in Gomti Nagar",
+    "description": "Furnished-style compact apartment for rent.",
+    "property_type": "apartment",
+    "listing_type": "rent",
+    "price": 14000,
+    "ai_predicted_price": null,
+    "area_sqft": 700,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "location": {
+      "address": "Viraj Khand, Gomti Nagar, Lucknow",
+      "city": "Lucknow",
+      "locality": "Gomti Nagar",
+      "latitude": 26.869699999999998,
+      "longitude": 80.9692
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-24/800/600",
+        "public_id": "landestatex-demo-24",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c6e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-10-25T15:43:08.592Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed4d",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "2 BHK Apartment in Tedhi Pulia",
+    "description": "Affordable residential apartment.",
+    "property_type": "apartment",
+    "listing_type": "sale",
+    "price": 3900000,
+    "ai_predicted_price": null,
+    "area_sqft": 1000,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "location": {
+      "address": "Tedhi Pulia, Lucknow",
+      "city": "Lucknow",
+      "locality": "Tedhi Pulia",
+      "latitude": 26.874699999999997,
+      "longitude": 80.97420000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-29/800/600",
+        "public_id": "landestatex-demo-29",
+        "is_primary": true,
+        "_id": "6ade238d5f1f81e18f846c96"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 2,
+    "__v": 2,
+    "created_at": "2026-10-25T14:40:39.639Z",
+    "updated_at": "2026-10-25T15:43:09.010Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed2b",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Premium 4 BHK Villa in Sushant Golf City",
+    "description": "Premium villa with spacious interiors.",
+    "property_type": "villa",
+    "listing_type": "sale",
+    "price": 18000000,
+    "ai_predicted_price": null,
+    "area_sqft": 3200,
+    "bedrooms": 4,
+    "bathrooms": 4,
+    "location": {
+      "address": "Ansals API, Sushant Golf City, Lucknow",
+      "city": "Lucknow",
+      "locality": "Sushant Golf City",
+      "latitude": 26.857699999999998,
+      "longitude": 80.9572
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-villa-12/800/600",
+        "public_id": "landestatex-demo-12",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846c0e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-10-25T15:43:07.647Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed2d",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Residential Plot in Raebareli Road",
+    "description": "Residential land in a developing area.",
+    "property_type": "plot",
+    "listing_type": "sale",
+    "price": 2200000,
+    "ai_predicted_price": null,
+    "area_sqft": 1000,
+    "bedrooms": 0,
+    "bathrooms": 0,
+    "location": {
+      "address": "Raebareli Road, Lucknow",
+      "city": "Lucknow",
+      "locality": "Raebareli Road",
+      "latitude": 26.8587,
+      "longitude": 80.9582
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-plot-13/800/600",
+        "public_id": "landestatex-demo-13",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846c16"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 3,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-11-01T11:14:35.596Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed17",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Luxury 3 BHK Apartment in Indira Nagar",
+    "description": "Premium apartment suitable for families.",
+    "property_type": "apartment",
+    "listing_type": "sale",
+    "price": 8500000,
+    "ai_predicted_price": null,
+    "area_sqft": 1650,
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "location": {
+      "address": "Sector 12, Indira Nagar, Lucknow",
+      "city": "Lucknow",
+      "locality": "Indira Nagar",
+      "latitude": 26.8477,
+      "longitude": 80.94720000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-2/800/600",
+        "public_id": "landestatex-demo-2",
+        "is_primary": true,
+        "_id": "6ade238a5f1f81e18f846bbe"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.636Z",
+    "updated_at": "2026-10-25T15:43:06.859Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed23",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Independent House in Rajajipuram",
+    "description": "Family home with open space and parking.",
+    "property_type": "villa",
+    "listing_type": "sale",
+    "price": 7200000,
+    "ai_predicted_price": null,
+    "area_sqft": 1900,
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "location": {
+      "address": "Block C, Rajajipuram, Lucknow",
+      "city": "Lucknow",
+      "locality": "Rajajipuram",
+      "latitude": 26.8537,
+      "longitude": 80.95320000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-villa-8/800/600",
+        "public_id": "landestatex-demo-8",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846bee"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 2,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.637Z",
+    "updated_at": "2026-11-01T11:16:22.642Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed19",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Independent Villa in Jankipuram",
+    "description": "Independent villa with spacious rooms and parking.",
+    "property_type": "villa",
+    "listing_type": "sale",
+    "price": 9500000,
+    "ai_predicted_price": null,
+    "area_sqft": 2200,
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "location": {
+      "address": "Sector H, Jankipuram, Lucknow",
+      "city": "Lucknow",
+      "locality": "Jankipuram",
+      "latitude": 26.848699999999997,
+      "longitude": 80.9482
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-villa-3/800/600",
+        "public_id": "landestatex-demo-3",
+        "is_primary": true,
+        "_id": "6ade238a5f1f81e18f846bc6"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 2,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.636Z",
+    "updated_at": "2026-11-01T11:16:24.994Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed3b",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "2 BHK Apartment in Krishna Nagar",
+    "description": "Affordable apartment for families.",
+    "property_type": "apartment",
+    "listing_type": "sale",
+    "price": 4200000,
+    "ai_predicted_price": null,
+    "area_sqft": 1150,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "location": {
+      "address": "Krishna Nagar, Lucknow",
+      "city": "Lucknow",
+      "locality": "Krishna Nagar",
+      "latitude": 26.865699999999997,
+      "longitude": 80.96520000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-20/800/600",
+        "public_id": "landestatex-demo-20",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c4e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 2,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-10-25T15:43:08.283Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed45",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "3 BHK Apartment in Sarojini Nagar",
+    "description": "Family apartment with spacious rooms.",
+    "property_type": "apartment",
+    "listing_type": "sale",
+    "price": 5200000,
+    "ai_predicted_price": null,
+    "area_sqft": 1350,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "location": {
+      "address": "Sarojini Nagar, Lucknow",
+      "city": "Lucknow",
+      "locality": "Sarojini Nagar",
+      "latitude": 26.8707,
+      "longitude": 80.9702
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-25/800/600",
+        "public_id": "landestatex-demo-25",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c76"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.639Z",
+    "updated_at": "2026-10-25T15:43:08.668Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed4f",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Premium 3 BHK Villa in Faizabad Road",
+    "description": "Independent villa with ample living space.",
+    "property_type": "villa",
+    "listing_type": "sale",
+    "price": 10500000,
+    "ai_predicted_price": null,
+    "area_sqft": 2400,
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "location": {
+      "address": "Faizabad Road, Lucknow",
+      "city": "Lucknow",
+      "locality": "Faizabad Road",
+      "latitude": 26.8757,
+      "longitude": 80.9752
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-villa-30/800/600",
+        "public_id": "landestatex-demo-30",
+        "is_primary": true,
+        "_id": "6ade238d5f1f81e18f846c9e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 2,
+    "created_at": "2026-10-25T14:40:39.639Z",
+    "updated_at": "2026-10-25T15:43:09.109Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed15",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Modern 2 BHK Apartment in Gomti Nagar",
+    "description": "Spacious apartment with modern amenities and nearby facilities.",
+    "property_type": "apartment",
+    "listing_type": "sale",
+    "price": 6500000,
+    "ai_predicted_price": null,
+    "area_sqft": 1200,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "location": {
+      "address": "Vijayant Khand, Gomti Nagar, Lucknow",
+      "city": "Lucknow",
+      "locality": "Gomti Nagar",
+      "latitude": 26.8467,
+      "longitude": 80.9462
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-1/800/600",
+        "public_id": "landestatex-demo-1",
+        "is_primary": true,
+        "_id": "6ade238a5f1f81e18f846bb6"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.634Z",
+    "updated_at": "2026-10-25T15:43:06.774Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed1b",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Residential Plot in Sultanpur Road",
+    "description": "Residential plot in a developing locality.",
+    "property_type": "plot",
+    "listing_type": "sale",
+    "price": 3500000,
+    "ai_predicted_price": null,
+    "area_sqft": 1500,
+    "bedrooms": 0,
+    "bathrooms": 0,
+    "location": {
+      "address": "Sultanpur Road, Lucknow",
+      "city": "Lucknow",
+      "locality": "Sultanpur Road",
+      "latitude": 26.8497,
+      "longitude": 80.9492
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-plot-4/800/600",
+        "public_id": "landestatex-demo-4",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846bce"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.637Z",
+    "updated_at": "2026-10-25T15:43:07.035Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed21",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "3 BHK Apartment in Mahanagar",
+    "description": "Well-maintained apartment with convenient access to markets.",
+    "property_type": "apartment",
+    "listing_type": "sale",
+    "price": 7800000,
+    "ai_predicted_price": null,
+    "area_sqft": 1500,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "location": {
+      "address": "Mahanagar Extension, Lucknow",
+      "city": "Lucknow",
+      "locality": "Mahanagar",
+      "latitude": 26.8527,
+      "longitude": 80.9522
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-7/800/600",
+        "public_id": "landestatex-demo-7",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846be6"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.637Z",
+    "updated_at": "2026-10-25T15:43:07.268Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed29",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Affordable 1 BHK Apartment in Chinhat",
+    "description": "Compact apartment for small families.",
+    "property_type": "apartment",
+    "listing_type": "sale",
+    "price": 2800000,
+    "ai_predicted_price": null,
+    "area_sqft": 650,
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "location": {
+      "address": "Chinhat Market Road, Lucknow",
+      "city": "Lucknow",
+      "locality": "Chinhat",
+      "latitude": 26.8567,
+      "longitude": 80.95620000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-11/800/600",
+        "public_id": "landestatex-demo-11",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846c06"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 2,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-11-01T11:16:26.988Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed49",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Plot in Mohanlalganj",
+    "description": "Residential land in the outskirts of Lucknow.",
+    "property_type": "plot",
+    "listing_type": "sale",
+    "price": 1400000,
+    "ai_predicted_price": null,
+    "area_sqft": 750,
+    "bedrooms": 0,
+    "bathrooms": 0,
+    "location": {
+      "address": "Mohanlalganj, Lucknow",
+      "city": "Lucknow",
+      "locality": "Mohanlalganj",
+      "latitude": 26.8727,
+      "longitude": 80.9722
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-plot-27/800/600",
+        "public_id": "landestatex-demo-27",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c86"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 2,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.639Z",
+    "updated_at": "2026-10-25T15:43:08.842Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed1d",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Commercial Space in Hazratganj",
+    "description": "Commercial property suitable for office or retail use.",
+    "property_type": "commercial",
+    "listing_type": "sale",
+    "price": 12500000,
+    "ai_predicted_price": null,
+    "area_sqft": 1800,
+    "bedrooms": 0,
+    "bathrooms": 1,
+    "location": {
+      "address": "Main Market, Hazratganj, Lucknow",
+      "city": "Lucknow",
+      "locality": "Hazratganj",
+      "latitude": 26.8507,
+      "longitude": 80.95020000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-commercial-5/800/600",
+        "public_id": "landestatex-demo-5",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846bd6"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.637Z",
+    "updated_at": "2026-10-25T15:43:07.116Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed35",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Independent Villa in Alambagh",
+    "description": "Independent home with convenient transport access.",
+    "property_type": "villa",
+    "listing_type": "sale",
+    "price": 8200000,
+    "ai_predicted_price": null,
+    "area_sqft": 2100,
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "location": {
+      "address": "Kanpur Road, Alambagh, Lucknow",
+      "city": "Lucknow",
+      "locality": "Alambagh",
+      "latitude": 26.862699999999997,
+      "longitude": 80.96220000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-villa-17/800/600",
+        "public_id": "landestatex-demo-17",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c36"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 4,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-11-01T11:16:24.767Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed3d",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Luxury Villa in Gomti Nagar Extension",
+    "description": "Large villa with modern interiors.",
+    "property_type": "villa",
+    "listing_type": "sale",
+    "price": 15500000,
+    "ai_predicted_price": null,
+    "area_sqft": 2800,
+    "bedrooms": 4,
+    "bathrooms": 4,
+    "location": {
+      "address": "Gomti Nagar Extension, Lucknow",
+      "city": "Lucknow",
+      "locality": "Gomti Nagar Extension",
+      "latitude": 26.866699999999998,
+      "longitude": 80.9662
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-villa-21/800/600",
+        "public_id": "landestatex-demo-21",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c56"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-10-25T15:43:08.358Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed47",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Independent House in Kalyanpur",
+    "description": "Independent home in a residential neighborhood.",
+    "property_type": "villa",
+    "listing_type": "sale",
+    "price": 5800000,
+    "ai_predicted_price": null,
+    "area_sqft": 1700,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "location": {
+      "address": "Kalyanpur, Lucknow",
+      "city": "Lucknow",
+      "locality": "Kalyanpur",
+      "latitude": 26.871699999999997,
+      "longitude": 80.97120000000001
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-villa-26/800/600",
+        "public_id": "landestatex-demo-26",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c7e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 3,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.639Z",
+    "updated_at": "2026-11-01T11:16:17.302Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed4b",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Commercial Building in Charbagh",
+    "description": "Commercial property suitable for office use.",
+    "property_type": "commercial",
+    "listing_type": "sale",
+    "price": 11000000,
+    "ai_predicted_price": null,
+    "area_sqft": 2000,
+    "bedrooms": 0,
+    "bathrooms": 2,
+    "location": {
+      "address": "Charbagh, Lucknow",
+      "city": "Lucknow",
+      "locality": "Charbagh",
+      "latitude": 26.8737,
+      "longitude": 80.9732
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-commercial-28/800/600",
+        "public_id": "landestatex-demo-28",
+        "is_primary": true,
+        "_id": "6ade238c5f1f81e18f846c8e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 2,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.639Z",
+    "updated_at": "2026-10-25T15:43:08.928Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed1f",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "2 BHK Flat for Rent in Aliganj",
+    "description": "Ready-to-move apartment in a residential neighborhood.",
+    "property_type": "apartment",
+    "listing_type": "rent",
+    "price": 18000,
+    "ai_predicted_price": null,
+    "area_sqft": 1100,
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "location": {
+      "address": "Sector L, Aliganj, Lucknow",
+      "city": "Lucknow",
+      "locality": "Aliganj",
+      "latitude": 26.851699999999997,
+      "longitude": 80.9512
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-6/800/600",
+        "public_id": "landestatex-demo-6",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846bde"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.637Z",
+    "updated_at": "2026-10-25T15:43:07.196Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed25",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "Residential Plot in Faizabad Road",
+    "description": "Plot suitable for residential construction.",
+    "property_type": "plot",
+    "listing_type": "sale",
+    "price": 2800000,
+    "ai_predicted_price": null,
+    "area_sqft": 1200,
+    "bedrooms": 0,
+    "bathrooms": 0,
+    "location": {
+      "address": "Near BBD University, Faizabad Road, Lucknow",
+      "city": "Lucknow",
+      "locality": "Faizabad Road",
+      "latitude": 26.854699999999998,
+      "longitude": 80.9542
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-plot-9/800/600",
+        "public_id": "landestatex-demo-9",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846bf6"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 2,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.637Z",
+    "updated_at": "2026-10-25T15:43:07.420Z"
+  },
+  {
+    "_id": "6ade14e7da2789d8b542ed33",
+    "owner_id": "6a60f73f3b28a55492fd4187",
+    "title": "3 BHK Apartment in Ashiyana",
+    "description": "Spacious family apartment in a residential area.",
+    "property_type": "apartment",
+    "listing_type": "sale",
+    "price": 6800000,
+    "ai_predicted_price": null,
+    "area_sqft": 1450,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "location": {
+      "address": "Sector K, Ashiyana, Lucknow",
+      "city": "Lucknow",
+      "locality": "Ashiyana",
+      "latitude": 26.8617,
+      "longitude": 80.9612
+    },
+    "amenities": [],
+    "images": [
+      {
+        "url": "https://picsum.photos/seed/landestatex-apartment-16/800/600",
+        "public_id": "landestatex-demo-16",
+        "is_primary": true,
+        "_id": "6ade238b5f1f81e18f846c2e"
+      }
+    ],
+    "status": "approved",
+    "rejection_reason": null,
+    "is_fraud_flagged": false,
+    "views_count": 0,
+    "__v": 3,
+    "created_at": "2026-10-25T14:40:39.638Z",
+    "updated_at": "2026-10-25T15:43:07.979Z"
+  }
+]

@@ -1,0 +1,693 @@
+
+import re
+from typing import Any
+
+from fastapi import APIRouter, Depends
+
+from app.core.security import verify_internal_api_key
+from app.schemas.chatbot_schema import (
+    ChatbotRequest,
+    ChatbotResponse,
+)
+
+
+router = APIRouter(
+    prefix="/api/chatbot",
+    tags=["Property Chatbot"],
+    dependencies=[Depends(verify_internal_api_key)],
+)
+
+
+# ==========================================
+# PROPERTY CONFIGURATION
+# ==========================================
+
+PROPERTY_TYPES = {
+    "apartment": [
+        "apartment",
+        "apartments",
+        "flat",
+        "flats",
+    ],
+    "villa": [
+        "villa",
+        "villas",
+        "bungalow",
+        "bungalows",
+    ],
+    "plot": [
+        "plot",
+        "plots",
+        "land",
+        "lands",
+    ],
+    "commercial": [
+        "commercial",
+        "office",
+        "offices",
+        "shop",
+        "shops",
+    ],
+}
+
+BUY_KEYWORDS = [
+    "buy",
+    "purchase",
+    "buying",
+    "sale",
+    "sell",
+]
+
+RENT_KEYWORDS = [
+    "rent",
+    "rental",
+    "lease",
+    "tenant",
+]
+
+REAL_ESTATE_KEYWORDS = [
+    "property", "properties", "house", "home", "flat",
+    "apartment", "villa", "plot", "land", "buy", "rent",
+    "sell", "price", "budget", "bedroom", "bhk",
+    "location", "locality", "city", "broker", "real estate",
+    "investment", "listing", "area", "sqft",
+]
+
+SEARCH_KEYWORDS = [
+    "find",
+    "show",
+    "search",
+    "looking for",
+    "look for",
+    "want",
+    "need",
+    "recommend",
+    "list",
+    "available",
+]
+
+
+# ==========================================
+# BASIC HELPERS
+# ==========================================
+
+def normalize(value: Any) -> str:
+    if value is None:
+        return ""
+
+    return str(value).strip().casefold()
+
+
+def number(value: Any) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+
+        return float(value)
+
+    except (TypeError, ValueError):
+        return None
+
+
+# ==========================================
+# MESSAGE EXTRACTION
+# ==========================================
+
+def extract_budget(message: str) -> float | None:
+    text = message.casefold().replace(",", "")
+
+    patterns = [
+        (r"(\d+(?:\.\d+)?)\s*(?:crore|cr)\b", 10000000),
+        (r"(\d+(?:\.\d+)?)\s*(?:lakh|lac|lakhs|lacs)\b", 100000),
+        (r"₹\s*(\d+(?:\.\d+)?)\s*(?:k)?", None),
+    ]
+
+    for pattern, multiplier in patterns:
+        match = re.search(pattern, text)
+
+        if match:
+            value = float(match.group(1))
+
+            if multiplier:
+                return value * multiplier
+
+            if "k" in match.group(0):
+                return value * 1000
+
+            return value
+
+    return None
+
+
+def extract_bedrooms(message: str) -> int | None:
+    match = re.search(
+        r"\b(\d+)\s*(?:bhk|bedroom|bedrooms|bed)\b",
+        message.casefold(),
+    )
+
+    if match:
+        return int(match.group(1))
+
+    return None
+
+
+def extract_property_type(message: str) -> str | None:
+    text = message.casefold()
+
+    for property_type, keywords in PROPERTY_TYPES.items():
+        if any(
+            re.search(
+                r"\b" + re.escape(keyword) + r"\b",
+                text,
+            )
+            for keyword in keywords
+        ):
+            return property_type
+
+    return None
+
+
+def extract_listing_type(message: str) -> str | None:
+    text = message.casefold()
+
+    if any(
+        re.search(
+            r"\b" + re.escape(word) + r"\b",
+            text,
+        )
+        for word in RENT_KEYWORDS
+    ):
+        return "rent"
+
+    if any(
+        re.search(
+            r"\b" + re.escape(word) + r"\b",
+            text,
+        )
+        for word in BUY_KEYWORDS
+    ):
+        return "sale"
+
+    return None
+
+
+def extract_location(message: str) -> str | None:
+    text = message.casefold()
+
+    stop_words = (
+        r"under|below|less|with|for|around|budget|between|"
+        r"rent|rental|buy|purchase|sale|selling|"
+        r"apartment|apartments|flat|flats|villa|villas|"
+        r"plot|plots|commercial|office|offices|shop|shops|"
+        r"bungalow|bungalows|\d+\s*bhk"
+    )
+
+    location_patterns = [
+        rf"\bin\s+([a-z][a-z\s]{{1,35}}?)"
+        rf"(?=\s+(?:{stop_words})\b|[,.!?]|$)",
+
+        rf"\bnear\s+([a-z][a-z\s]{{1,35}}?)"
+        rf"(?=\s+(?:{stop_words})\b|[,.!?]|$)",
+    ]
+
+    for pattern in location_patterns:
+        match = re.search(pattern, text)
+
+        if match:
+            location = match.group(1).strip()
+
+            if location not in {"my budget", "my area"}:
+                return location
+
+    return None
+
+
+# ==========================================
+# CONVERSATION CONTEXT
+# ==========================================
+
+def assistant_asked_listing_type(
+    conversation_history: list[Any],
+) -> bool:
+    if not conversation_history:
+        return False
+
+    last_assistant_message = None
+
+    for item in reversed(conversation_history):
+        if item.role == "assistant":
+            last_assistant_message = item.content.casefold()
+            break
+
+    if not last_assistant_message:
+        return False
+
+    return (
+        "buy or rent" in last_assistant_message
+        or "looking to buy or rent" in last_assistant_message
+        or "purchase or rent" in last_assistant_message
+    )
+
+
+def get_contextual_message(
+    request: ChatbotRequest,
+) -> str:
+    """
+    Restore the previous property search only when the
+    assistant's latest response was asking Buy/Rent.
+    """
+
+    if not assistant_asked_listing_type(
+        request.conversation_history
+    ):
+        return request.message
+
+    found_latest_assistant = False
+
+    for item in reversed(request.conversation_history):
+
+        if item.role == "assistant":
+            found_latest_assistant = True
+            continue
+
+        if found_latest_assistant and item.role == "user":
+            return item.content + " " + request.message
+
+    return request.message
+
+
+# ==========================================
+# QUERY CLASSIFICATION
+# ==========================================
+
+def is_real_estate_query(message: str) -> bool:
+    text = message.casefold().strip()
+
+    greetings = [
+        "hi",
+        "hello",
+        "hey",
+        "good morning",
+        "good afternoon",
+        "good evening",
+    ]
+
+    if text in greetings:
+        return True
+
+    return any(
+        keyword in text
+        for keyword in REAL_ESTATE_KEYWORDS
+    )
+
+
+def is_property_search_request(
+    message: str,
+    filters: dict[str, Any],
+) -> bool:
+    text = message.casefold()
+
+    if (
+        filters["location"]
+        or filters["budget"] is not None
+        or filters["property_type"]
+        or filters["bedrooms"] is not None
+        or filters["listing_type"]
+    ):
+        return True
+
+    return any(
+        keyword in text
+        for keyword in SEARCH_KEYWORDS
+    )
+
+
+# ==========================================
+# PROPERTY LOCATION
+# ==========================================
+
+def get_property_location(
+    property_data: dict[str, Any],
+) -> str:
+    location = property_data.get("location") or {}
+
+    if isinstance(location, dict):
+        location_text = " ".join([
+            str(location.get("city") or ""),
+            str(location.get("locality") or ""),
+            str(location.get("address") or ""),
+        ])
+    else:
+        location_text = str(location)
+
+    return " ".join([
+        str(property_data.get("city") or ""),
+        str(property_data.get("locality") or ""),
+        str(property_data.get("address") or ""),
+        location_text,
+    ]).casefold()
+
+
+# ==========================================
+# PROPERTY FILTERING
+# ==========================================
+
+def matches_property(
+    property_data: dict[str, Any],
+    filters: dict[str, Any],
+) -> bool:
+
+    price = number(property_data.get("price"))
+
+    # Budget filter
+    if filters["budget"] is not None:
+        if price is None or price > filters["budget"]:
+            return False
+
+    # Property type filter
+    if filters["property_type"]:
+        if (
+            normalize(property_data.get("property_type"))
+            != filters["property_type"]
+        ):
+            return False
+
+    # Buy/Rent filter
+    if filters["listing_type"]:
+        if (
+            normalize(property_data.get("listing_type"))
+            != filters["listing_type"]
+        ):
+            return False
+
+    # Bedroom filter
+    if filters["bedrooms"] is not None:
+        bedrooms = number(property_data.get("bedrooms"))
+
+        if bedrooms is None or bedrooms < filters["bedrooms"]:
+            return False
+
+    # Exact city/locality filter
+    # Do not search the full address here.
+    # Example: "Kanpur Road, Alambagh, Lucknow"
+    # must NOT match a Kanpur city search.
+
+    if filters["location"]:
+        location = property_data.get("location") or {}
+
+        if isinstance(location, dict):
+            city = normalize(
+                location.get("city")
+                or property_data.get("city")
+            )
+
+            locality = normalize(
+                location.get("locality")
+                or property_data.get("locality")
+            )
+        else:
+            city = normalize(property_data.get("city"))
+            locality = normalize(property_data.get("locality"))
+
+        requested_location = normalize(filters["location"])
+
+        if (
+            requested_location != city
+            and requested_location != locality
+        ):
+            return False
+
+    return True
+
+
+# ==========================================
+# PRICE FORMATTING
+# ==========================================
+
+def format_price(
+    value: Any,
+    listing_type: str | None = None,
+) -> str:
+    price = number(value)
+
+    if price is None:
+        return "Price not available"
+
+    formatted_price = f"₹{price:,.0f}"
+
+    if listing_type == "rent":
+        return f"{formatted_price}/month"
+
+    return formatted_price
+
+
+# ==========================================
+# PROPERTY RECOMMENDATIONS
+# ==========================================
+
+def build_recommendations(
+    properties: list[dict[str, Any]],
+    filters: dict[str, Any],
+) -> list[dict[str, Any]]:
+
+    matched = []
+
+    for property_data in properties:
+        if not isinstance(property_data, dict):
+            continue
+
+        property_id = (
+            property_data.get("id")
+            or property_data.get("_id")
+        )
+
+        if not property_id:
+            continue
+
+        if not matches_property(property_data, filters):
+            continue
+
+        listing_type = normalize(
+            property_data.get("listing_type")
+        )
+
+        matched.append({
+            "property_id": str(property_id),
+
+            "title": str(
+                property_data.get("title")
+                or "Property listing"
+            ),
+
+            "property_type": property_data.get(
+                "property_type"
+            ),
+
+            "listing_type": listing_type,
+
+            "price": number(
+                property_data.get("price")
+            ),
+
+            "formatted_price": format_price(
+                property_data.get("price"),
+                listing_type,
+            ),
+
+            "area_sqft": number(
+                property_data.get("area_sqft")
+            ),
+
+            "bedrooms": property_data.get("bedrooms"),
+
+            "bathrooms": property_data.get("bathrooms"),
+
+            "city": property_data.get("city")
+            or (
+                property_data.get("location", {}).get("city")
+                if isinstance(property_data.get("location"), dict)
+                else None
+            ),
+
+            "locality": property_data.get("locality")
+            or (
+                property_data.get("location", {}).get("locality")
+                if isinstance(property_data.get("location"), dict)
+                else None
+            ),
+
+            "match_reasons": [
+                "Matches your stated property preferences"
+            ],
+        })
+
+    matched.sort(
+        key=lambda item: (
+            item["price"]
+            if item["price"] is not None
+            else float("inf")
+        )
+    )
+
+    return matched[:5]
+
+
+# ==========================================
+# RESPONSE GENERATION
+# ==========================================
+
+def generate_reply(
+    message: str,
+    recommendations: list[dict[str, Any]],
+    filters: dict[str, Any],
+) -> tuple[str, list[str]]:
+
+    text = message.casefold().strip()
+
+    greetings = [
+        "hi",
+        "hello",
+        "hey",
+        "good morning",
+        "good afternoon",
+        "good evening",
+    ]
+
+    if text in greetings:
+        return (
+            "Hello! Welcome to LandEstateX. I can help you "
+            "find properties, explore prices, and understand "
+            "buying or renting options. What are you looking for?",
+            [
+                "Find apartments in Kanpur",
+                "Show 2 BHK properties under 50 lakh",
+                "Find rental properties",
+            ],
+        )
+
+    if not is_real_estate_query(message):
+        return (
+            "I am the LandEstateX property assistant. I can help "
+            "with property searches, buying, selling, renting, "
+            "budgets, and property-related questions.",
+            [
+                "Find properties in Kanpur",
+                "How can I choose a property?",
+                "Show rental properties",
+            ],
+        )
+
+    if filters["listing_type"] is None:
+        return (
+            "Are you looking to buy or rent a property? "
+            "I can then show you only the relevant approved listings.",
+            [
+                "Buy",
+                "Rent",
+            ],
+        )
+
+    if not recommendations:
+        return (
+            "I couldn't find a matching approved "
+            "property listing for your requirements. "
+            "You can try increasing your budget, changing "
+            "the location, or adjusting your property requirements.",
+            [
+                "Show properties with a higher budget",
+                "Search in another locality",
+                "Show all available apartments",
+            ],
+        )
+
+    reply = (
+        f"I found {len(recommendations)} matching approved "
+        f"{'rental' if filters['listing_type'] == 'rent' else 'sale'} "
+        f"property listing(s) for your requirements."
+    )
+
+    return (
+        reply,
+        [
+            "Show more property options",
+            "Compare these properties",
+            "How can I estimate property prices?",
+        ],
+    )
+
+
+# ==========================================
+# CHATBOT API
+# ==========================================
+
+@router.post("/", response_model=ChatbotResponse)
+def chat_with_property_assistant(
+    request: ChatbotRequest,
+):
+    original_message = request.message
+
+    # Restore previous search when user selects Buy or Rent.
+    message = get_contextual_message(request)
+
+    if not is_real_estate_query(message):
+        reply, suggestions = generate_reply(
+            message,
+            [],
+            {
+                "budget": None,
+                "property_type": None,
+                "listing_type": None,
+                "bedrooms": None,
+                "location": None,
+            },
+        )
+
+        return ChatbotResponse(
+            message=original_message,
+            reply=reply,
+            suggested_questions=suggestions,
+        )
+
+    filters = {
+        "budget": extract_budget(message),
+        "property_type": extract_property_type(message),
+        "listing_type": extract_listing_type(message),
+        "bedrooms": extract_bedrooms(message),
+        "location": extract_location(message),
+    }
+
+    # Ask Buy/Rent before returning property recommendations.
+    if (
+        filters["listing_type"] is None
+        and is_property_search_request(message, filters)
+    ):
+        reply, suggestions = generate_reply(
+            message,
+            [],
+            filters,
+        )
+
+        return ChatbotResponse(
+            message=original_message,
+            reply=reply,
+            suggested_questions=suggestions,
+            recommendations=[],
+        )
+
+    recommendations = build_recommendations(
+        request.properties,
+        filters,
+    )
+
+    reply, suggestions = generate_reply(
+        message,
+        recommendations,
+        filters,
+    )
+
+    return ChatbotResponse(
+        message=original_message,
+        reply=reply,
+        suggested_questions=suggestions,
+        recommendations=recommendations,
+    )

@@ -12,19 +12,34 @@ const defaultForm = {
   locality: "Swaroop Nagar",
 };
 
-const getFormValues = (data = {}) => ({
-  property_type: String(
-    data.property_type || defaultForm.property_type
-  ).toLowerCase(),
-  listing_type: String(
-    data.listing_type || defaultForm.listing_type
-  ).toLowerCase(),
-  area_sqft: String(data.area_sqft ?? defaultForm.area_sqft),
-  bedrooms: String(data.bedrooms ?? defaultForm.bedrooms),
-  bathrooms: String(data.bathrooms ?? defaultForm.bathrooms),
-  city: String(data.city || defaultForm.city),
-  locality: String(data.locality || defaultForm.locality),
-});
+const supportedPropertyTypes = [
+  "apartment",
+  "villa",
+  "plot",
+  "commercial",
+];
+
+const getFormValues = (data = {}) => {
+  const propertyType = String(
+    data.property_type ?? defaultForm.property_type
+  ).toLowerCase();
+
+  return {
+    property_type: supportedPropertyTypes.includes(propertyType)
+      ? propertyType
+      : defaultForm.property_type,
+
+    listing_type: String(
+      data.listing_type ?? defaultForm.listing_type
+    ).toLowerCase(),
+
+    area_sqft: String(data.area_sqft ?? defaultForm.area_sqft),
+    bedrooms: String(data.bedrooms ?? defaultForm.bedrooms),
+    bathrooms: String(data.bathrooms ?? defaultForm.bathrooms),
+    city: String(data.city ?? defaultForm.city),
+    locality: String(data.locality ?? defaultForm.locality),
+  };
+};
 
 const inputStyle = {
   width: "100%",
@@ -60,11 +75,12 @@ function PricePredictionCard({
   const [form, setForm] = useState(() =>
     getFormValues(initialData)
   );
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  // Update the form when property details arrive or change.
+  // Update form whenever the selected property changes.
   useEffect(() => {
     if (!initialData) return;
 
@@ -95,6 +111,7 @@ function PricePredictionCard({
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
     setError("");
     setResult(null);
 
@@ -102,17 +119,45 @@ function PricePredictionCard({
     const bedrooms = Number(form.bedrooms);
     const bathrooms = Number(form.bathrooms);
 
+    if (!supportedPropertyTypes.includes(form.property_type)) {
+      setError("Please select a supported property type.");
+      return;
+    }
+
+    if (!["sale", "rent"].includes(form.listing_type)) {
+      setError("Please select a valid listing type.");
+      return;
+    }
+
+    if (!form.city.trim() || !form.locality.trim()) {
+      setError("Please enter both city and locality.");
+      return;
+    }
+
     if (
-      !form.city.trim() ||
-      !form.locality.trim() ||
+      form.area_sqft.trim() === "" ||
       !Number.isFinite(area) ||
-      area <= 0 ||
+      area <= 0
+    ) {
+      setError("Please enter a valid property area greater than zero.");
+      return;
+    }
+
+    if (
+      form.bedrooms.trim() === "" ||
       !Number.isFinite(bedrooms) ||
-      bedrooms < 0 ||
+      bedrooms < 0
+    ) {
+      setError("Please enter a valid bedroom count.");
+      return;
+    }
+
+    if (
+      form.bathrooms.trim() === "" ||
       !Number.isFinite(bathrooms) ||
       bathrooms < 0
     ) {
-      setError("Please enter valid property details.");
+      setError("Please enter a valid bathroom count.");
       return;
     }
 
@@ -130,12 +175,11 @@ function PricePredictionCard({
 
     try {
       const prediction = await predictPropertyPrice(propertyData);
-
-      const price = Number(prediction?.predicted_price);
+      const predictedPrice = Number(prediction?.predicted_price);
 
       if (
-        !Number.isFinite(price) ||
-        price <= 0
+        !Number.isFinite(predictedPrice) ||
+        predictedPrice <= 0
       ) {
         throw new Error(
           "The AI service did not return a valid price."
@@ -144,7 +188,7 @@ function PricePredictionCard({
 
       setResult({
         ...prediction,
-        predicted_price: price,
+        predicted_price: predictedPrice,
       });
     } catch (err) {
       const responseData = err.response?.data;
@@ -162,6 +206,7 @@ function PricePredictionCard({
   };
 
   const currentListedPrice = Number(listedPrice);
+
   const hasListedPrice =
     listedPrice !== undefined &&
     listedPrice !== null &&
@@ -218,7 +263,13 @@ function PricePredictionCard({
           AI Property Price Estimate
         </h2>
 
-        <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+        <p
+          style={{
+            margin: 0,
+            color: "#6b7280",
+            fontSize: "14px",
+          }}
+        >
           {initialData
             ? "Review this property's details and estimate its price."
             : "Enter property details to get an estimated price."}
@@ -238,6 +289,7 @@ function PricePredictionCard({
             <label style={labelStyle} htmlFor="property_type">
               Property type
             </label>
+
             <select
               id="property_type"
               name="property_type"
@@ -246,7 +298,6 @@ function PricePredictionCard({
               style={inputStyle}
             >
               <option value="apartment">Apartment</option>
-              <option value="house">House</option>
               <option value="villa">Villa</option>
               <option value="plot">Plot</option>
               <option value="commercial">Commercial</option>
@@ -257,6 +308,7 @@ function PricePredictionCard({
             <label style={labelStyle} htmlFor="listing_type">
               Listing type
             </label>
+
             <select
               id="listing_type"
               name="listing_type"
@@ -273,6 +325,7 @@ function PricePredictionCard({
             <label style={labelStyle} htmlFor="area_sqft">
               Area (sq. ft.)
             </label>
+
             <input
               id="area_sqft"
               name="area_sqft"
@@ -289,6 +342,7 @@ function PricePredictionCard({
             <label style={labelStyle} htmlFor="bedrooms">
               Bedrooms
             </label>
+
             <input
               id="bedrooms"
               name="bedrooms"
@@ -305,6 +359,7 @@ function PricePredictionCard({
             <label style={labelStyle} htmlFor="bathrooms">
               Bathrooms
             </label>
+
             <input
               id="bathrooms"
               name="bathrooms"
@@ -321,6 +376,7 @@ function PricePredictionCard({
             <label style={labelStyle} htmlFor="city">
               City
             </label>
+
             <input
               id="city"
               name="city"
@@ -335,6 +391,7 @@ function PricePredictionCard({
             <label style={labelStyle} htmlFor="locality">
               Locality
             </label>
+
             <input
               id="locality"
               name="locality"
@@ -362,9 +419,7 @@ function PricePredictionCard({
             cursor: loading ? "not-allowed" : "pointer",
           }}
         >
-          {loading
-            ? "Predicting price..."
-            : "Estimate Property Price"}
+          {loading ? "Predicting price..." : "Estimate Property Price"}
         </button>
       </form>
 

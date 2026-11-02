@@ -28,7 +28,7 @@ const PriceHistoryChart = ({ currentPrice }) => {
   const [selectedIndex, setSelectedIndex] = useState(null);
 
   // Demo timeline: January 2024 through December 2030 (84 monthly points).
-  // October 2026 is the current-price reference month for this demo.
+  // November 2026 is the current-price reference month for this demo.
   const chart = useMemo(() => {
     const baseline = Number(currentPrice);
 
@@ -40,7 +40,7 @@ const PriceHistoryChart = ({ currentPrice }) => {
     const startMonth = 0;
     const endYear = 2030;
     const endMonth = 11;
-    const referenceDate = new Date(2026, 9, 1);
+    const referenceDate = new Date(2026, 10, 1);
     const referenceAbsoluteMonth =
       referenceDate.getFullYear() * 12 + referenceDate.getMonth();
 
@@ -75,9 +75,17 @@ const PriceHistoryChart = ({ currentPrice }) => {
         type = 'forecast';
       }
 
-      // A small repeatable seasonal variation makes the demo line less linear.
+      // Repeatable seasonal and medium-term market cycles create visible,
+      // illustrative ups and downs without changing the current reference price.
       if (monthDifference !== 0) {
-        value *= 1 + Math.sin((month / 12) * Math.PI * 2) * 0.006;
+        const seasonalWave =
+          Math.sin((month / 12) * Math.PI * 2) * 0.012;
+        const mediumTermWave =
+          Math.sin((monthDifference / 18) * Math.PI * 2) * 0.009;
+        const longTermWave =
+          Math.cos((monthDifference / 37) * Math.PI * 2) * 0.006;
+
+        value *= 1 + seasonalWave + mediumTermWave + longTermWave;
       }
 
       points.push({

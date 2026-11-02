@@ -13,6 +13,9 @@ const {
 const { restrictTo } = require("../middlewares/role.middleware");
 const validate = require("../middlewares/validate.middleware");
 
+// ---------------------------------------------
+// ADMIN CONTROLLERS
+// ---------------------------------------------
 const {
   getDashboardStats,
   getAllUsers,
@@ -23,29 +26,53 @@ const {
   deleteUser,
 } = require("../controllers/admin.controller");
 
+// ---------------------------------------------
+// PROPERTY CONTROLLERS
+// ---------------------------------------------
 const {
   getAllProperties,
   updatePropertyStatus,
   deleteProperty,
 } = require("../controllers/adminProperty.controller");
 
+// ---------------------------------------------
+// BROKER CONTROLLERS
+// ---------------------------------------------
 const {
   getAllBrokers,
   updateBrokerVerification,
   updateBrokerAccountStatus,
 } = require("../controllers/adminBroker.controller");
 
+// ---------------------------------------------
+// ANALYTICS CONTROLLERS
+// ---------------------------------------------
 const {
   getUserGrowth,
   getRoleDistribution,
   getFraudFlags,
 } = require("../controllers/adminAnalytics.controller");
 
+// ---------------------------------------------
+// SETTINGS CONTROLLERS
+// ---------------------------------------------
 const {
   getSettings,
   updateSettings,
 } = require("../controllers/adminSettings.controller");
 
+// ---------------------------------------------
+// AI FRAUD DETECTION CONTROLLERS
+// ---------------------------------------------
+const {
+  analysePropertyFraudForAdmin,
+  getFraudReports,
+  reviewFraudReport,
+} = require("../controllers/adminFraud.controller");
+
+// ---------------------------------------------
+// VALIDATORS
+// ---------------------------------------------
 const {
   userIdParamValidator,
   updateUserStatusValidator,
@@ -53,16 +80,30 @@ const {
 } = require("../validators/admin.validator");
 
 const router = Router();
+
 console.log("[Admin Routes] admin.routes.js loaded");
 
-// All routes require authentication and admin role.
+// ---------------------------------------------
+// GLOBAL ADMIN AUTHENTICATION
+// All routes require JWT + admin role.
+// ---------------------------------------------
 router.use(verifyJWT, restrictTo("admin"));
 
-// Dashboard
-router.get("/dashboard-stats", getDashboardStats);
+// ---------------------------------------------
+// DASHBOARD
+// ---------------------------------------------
+router.get(
+  "/dashboard-stats",
+  getDashboardStats
+);
 
-// User management
-router.get("/users", getAllUsers);
+// ---------------------------------------------
+// USER MANAGEMENT
+// ---------------------------------------------
+router.get(
+  "/users",
+  getAllUsers
+);
 
 router.get(
   "/users/:userId",
@@ -99,8 +140,13 @@ router.delete(
   deleteUser
 );
 
-// Property moderation
-router.get("/properties", getAllProperties);
+// ---------------------------------------------
+// PROPERTY MODERATION
+// ---------------------------------------------
+router.get(
+  "/properties",
+  getAllProperties
+);
 
 router.patch(
   "/properties/:propertyId/status",
@@ -112,12 +158,13 @@ router.delete(
   deleteProperty
 );
 
-// Broker management
-router.get("/brokers", getAllBrokers);
-
-router.get("/__route-check", (req, res) => {
-  res.json({ success: true, message: "Admin routes are mounted" });
-});
+// ---------------------------------------------
+// BROKER MANAGEMENT
+// ---------------------------------------------
+router.get(
+  "/brokers",
+  getAllBrokers
+);
 
 router.patch(
   "/brokers/:brokerId/verification",
@@ -129,17 +176,62 @@ router.patch(
   updateBrokerAccountStatus
 );
 
-// Analytics
-router.get("/analytics/user-growth", getUserGrowth);
+// ---------------------------------------------
+// ANALYTICS
+// ---------------------------------------------
+router.get(
+  "/analytics/user-growth",
+  getUserGrowth
+);
 
-router.get("/analytics/role-distribution", getRoleDistribution);
+router.get(
+  "/analytics/role-distribution",
+  getRoleDistribution
+);
 
-// Fraud detection
-router.get("/fraud/flags", getFraudFlags);
+// ---------------------------------------------
+// FRAUD DETECTION
+// ---------------------------------------------
 
-// Settings
-router.get("/settings", getSettings);
+// Existing rule-based fraud flags.
+router.get(
+  "/fraud/flags",
+  getFraudFlags
+);
 
-router.patch("/settings", updateSettings);
+// Run Python AI fraud analysis for a property.
+// Saves the assessment in MongoDB FraudReport.
+router.post(
+  "/fraud/analyze/:propertyId",
+  analysePropertyFraudForAdmin
+);
+
+// Get saved fraud reports.
+// Supports review_status, severity, is_suspicious,
+// page and limit query parameters.
+router.get(
+  "/fraud/reports",
+  getFraudReports
+);
+
+// Admin review action.
+// Supported statuses: reviewed, confirmed, dismissed.
+router.patch(
+  "/fraud/reports/:reportId/review",
+  reviewFraudReport
+);
+
+// ---------------------------------------------
+// SETTINGS
+// ---------------------------------------------
+router.get(
+  "/settings",
+  getSettings
+);
+
+router.patch(
+  "/settings",
+  updateSettings
+);
 
 module.exports = router;

@@ -2,22 +2,56 @@
 const AI_SERVICE_URL =
   process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 
-async function predictPropertyPrice(propertyData) {
+const AI_SERVICE_API_KEY = process.env.AI_SERVICE_API_KEY;
+
+// ---------------------------------------------
+// AI SERVICE HEADERS
+// ---------------------------------------------
+function getAIHeaders() {
+  if (!AI_SERVICE_API_KEY) {
+    const error = new Error(
+      'AI_SERVICE_API_KEY is not configured in backend environment.'
+    );
+
+    error.statusCode = 500;
+    throw error;
+  }
+
+  return {
+    'Content-Type': 'application/json',
+    'X-API-Key': AI_SERVICE_API_KEY,
+  };
+}
+
+// ---------------------------------------------
+// COMMON AI SERVICE CALL
+// ---------------------------------------------
+async function callAIService(
+  path,
+  payload,
+  timeout,
+  fallbackMessage
+) {
+  const headers = getAIHeaders();
+
   let response;
 
   try {
     response = await fetch(
-      `${AI_SERVICE_URL.replace(/\/+$/, '')}/api/price-prediction/`,
+      `${AI_SERVICE_URL.replace(/\/+$/, '')}${path}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(propertyData),
-        signal: AbortSignal.timeout(15000),
+        headers,
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(timeout),
       }
     );
   } catch (error) {
+    console.error(
+      `[AI Gateway] Request failed for ${path}:`,
+      error.message
+    );
+
     const serviceError = new Error(
       error.name === 'TimeoutError'
         ? 'AI service timed out. Please try again.'
@@ -31,11 +65,31 @@ async function predictPropertyPrice(propertyData) {
   const result = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const serviceError = new Error(
-      result?.detail || result?.message || 'Price prediction failed.'
+    const detail = result?.detail ?? result?.message;
+
+    const errorMessage =
+      typeof detail === 'string'
+        ? detail
+        : detail
+          ? JSON.stringify(detail)
+          : fallbackMessage;
+
+    console.error(
+      `[AI Gateway] ${path} returned HTTP ${response.status}:`,
+      errorMessage
     );
 
-    // AI service errors are upstream errors, not client validation errors.
+    const serviceError = new Error(errorMessage);
+
+    serviceError.statusCode = 502;
+    throw serviceError;
+  }
+
+  if (!result || typeof result !== 'object') {
+    const serviceError = new Error(
+      'AI service returned an invalid response.'
+    );
+
     serviceError.statusCode = 502;
     throw serviceError;
   }
@@ -43,4 +97,100 @@ async function predictPropertyPrice(propertyData) {
   return result;
 }
 
-module.exports = { predictPropertyPrice };
+// ---------------------------------------------
+// AI PRICE PREDICTION
+// ---------------------------------------------
+async function predictPropertyPrice(propertyData) {
+  return callAIService(
+    '/api/price-prediction/',
+    propertyData,
+    15000,
+    'Price prediction failed.'
+  );
+}
+
+// ---------------------------------------------
+// AI PROPERTY RECOMMENDATIONS
+// ---------------------------------------------
+async function getPropertyRecommendations(
+  preferences,
+  properties
+) {
+  return callAIService(
+    '/api/recommendations/',
+    {
+      preferences,
+      properties,
+    },
+    20000,
+    'Property recommendations could not be generated.'
+  );
+}
+
+// ---------------------------------------------
+// AI IMAGE VALUATION
+// ---------------------------------------------
+async function analysePropertyImage(imageData) {
+  return callAIService(
+    '/api/image-valuation/',
+    imageData,
+    30000,
+    'Image valuation failed.'
+  );
+}
+
+// ---------------------------------------------
+// AI PROPERTY CHATBOT
+// ---------------------------------------------
+async function chatWithPropertyAssistant(
+  message,
+  conversationHistory,
+  properties
+) {
+  return callAIService(
+    '/api/chatbot/',
+    {
+      message,
+      conversation_history: conversationHistory,
+      properties,
+    },
+    20000,
+    'Property chatbot response could not be generated.'
+  );
+}
+
+// ---------------------------------------------
+// AI FRAUD DETECTION
+// ---------------------------------------------
+async function analysePropertyFraud(propertyData) {
+  return callAIService(
+    '/api/fraud-detection/analyze/',
+    propertyData,
+    15000,
+    'Property fraud analysis failed.'
+  );
+}
+
+// ---------------------------------------------
+// AI INVESTMENT ANALYTICS
+// ---------------------------------------------
+async function analysePropertyInvestment(investmentData) {
+  return callAIService(
+    '/api/investment-analytics/analyze/',
+    investmentData,
+    15000,
+    'Property investment analysis failed.'
+  );
+}
+
+// ---------------------------------------------
+// EXPORT SERVICES
+// ---------------------------------------------
+module.exports = {
+  predictPropertyPrice,
+  getPropertyRecommendations,
+  analysePropertyImage,
+  chatWithPropertyAssistant,
+  analysePropertyFraud,
+  analysePropertyInvestment,
+};

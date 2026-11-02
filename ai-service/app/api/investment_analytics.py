@@ -1,0 +1,245 @@
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field, field_validator
+
+from app.core.security import verify_internal_api_key
+
+
+router = APIRouter(
+    prefix="/api/investment-analytics",
+    tags=["Investment Analytics"],
+    dependencies=[Depends(verify_internal_api_key)],
+)
+
+
+class InvestmentAnalysisRequest(BaseModel):
+    property_id: str = Field(default="", max_length=100)
+
+    purchase_price: float = Field(gt=0)
+    area_sqft: float = Field(gt=0)
+
+    monthly_rent: float = Field(ge=0)
+    annual_expenses: float = Field(ge=0)
+
+    annual_appreciation_percent: float = Field(
+        default=0,
+        ge=-20,
+        le=30,
+    )
+
+    holding_period_years: int = Field(
+        default=5,
+        ge=1,
+        le=30,
+    )
+
+    @field_validator("property_id")
+    @classmethod
+    def clean_property_id(cls, value: str) -> str:
+        return value.strip()
+
+
+def analyse_investment(data: InvestmentAnalysisRequest):
+    """
+    Transparent property investment calculations.
+
+    This engine uses user-provided rent, expenses and appreciation
+    assumptions. It does not claim to predict guaranteed returns.
+    """
+
+    purchase_price = data.purchase_price
+    annual_rent = data.monthly_rent * 12
+    annual_expenses = data.annual_expenses
+
+    annual_net_income = annual_rent - annual_expenses
+
+    gross_yield = (
+        annual_rent / purchase_price
+    ) * 100
+
+    net_yield = (
+        annual_net_income / purchase_price
+    ) * 100
+
+    expense_ratio = (
+        annual_expenses / annual_rent
+    ) * 100 if annual_rent > 0 else None
+
+    price_per_sqft = purchase_price / data.area_sqft
+
+    holding_period = data.holding_period_years
+
+    appreciation_rate = (
+        data.annual_appreciation_percent / 100
+    )
+
+    projected_value = (
+        purchase_price * ((1 + appreciation_rate) ** holding_period)
+    )
+
+    cumulative_rental_income = annual_net_income * holding_period
+
+    estimated_total_profit = (
+        projected_value - purchase_price
+    ) + cumulative_rental_income
+
+    total_roi = (
+        estimated_total_profit / purchase_price
+    ) * 100
+
+    annualized_roi = (
+        total_roi / holding_period
+    )
+
+    rental_payback_years = (
+        purchase_price / annual_net_income
+        if annual_net_income > 0
+        else None
+    )
+
+    # --------------------------------------------------
+    # EXPLAINABLE INVESTMENT RISK ASSESSMENT
+    # --------------------------------------------------
+
+    risk_score = 0
+    risk_factors = []
+
+    if gross_yield < 2:
+        risk_score += 30
+        risk_factors.append({
+            "factor": "low_gross_rental_yield",
+            "points": 30,
+            "message": "Gross rental yield is below 2%.",
+        })
+    elif gross_yield < 3.5:
+        risk_score += 15
+        risk_factors.append({
+            "factor": "moderate_gross_rental_yield",
+            "points": 15,
+            "message": "Gross rental yield is below 3.5%.",
+        })
+
+    if net_yield <= 0:
+        risk_score += 35
+        risk_factors.append({
+            "factor": "negative_net_income",
+            "points": 35,
+            "message": "Annual expenses equal or exceed annual rental income.",
+        })
+    elif net_yield < 2:
+        risk_score += 20
+        risk_factors.append({
+            "factor": "low_net_rental_yield",
+            "points": 20,
+            "message": "Net rental yield is below 2%.",
+        })
+
+    if expense_ratio is not None and expense_ratio > 40:
+        risk_score += 15
+        risk_factors.append({
+            "factor": "high_expense_ratio",
+            "points": 15,
+            "message": "Annual expenses exceed 40% of gross rental income.",
+        })
+
+    if data.annual_appreciation_percent < 0:
+        risk_score += 20
+        risk_factors.append({
+            "factor": "negative_appreciation_assumption",
+            "points": 20,
+            "message": "The selected appreciation assumption is negative.",
+        })
+
+    risk_score = min(risk_score, 100)
+    investment_score = 100 - risk_score
+
+    if risk_score >= 60:
+        risk_level = "high"
+        recommendation = (
+            "High estimated investment risk. Review rental income, "
+            "expenses and purchase price carefully."
+        )
+    elif risk_score >= 30:
+        risk_level = "medium"
+        recommendation = (
+            "Moderate estimated investment risk. Compare similar "
+            "properties and verify expected rental income."
+        )
+    else:
+        risk_level = "low"
+        recommendation = (
+            "Lower estimated risk under the supplied assumptions. "
+            "Verify all figures before making an investment decision."
+        )
+
+    return {
+        "property_id": data.property_id,
+
+        "investment_metrics": {
+            "purchase_price": round(purchase_price, 2),
+            "price_per_sqft": round(price_per_sqft, 2),
+            "monthly_rent": round(data.monthly_rent, 2),
+            "annual_rent": round(annual_rent, 2),
+            "annual_expenses": round(annual_expenses, 2),
+            "annual_net_income": round(annual_net_income, 2),
+            "gross_rental_yield_percent": round(gross_yield, 2),
+            "net_rental_yield_percent": round(net_yield, 2),
+            "expense_ratio_percent": (
+                round(expense_ratio, 2)
+                if expense_ratio is not None else None
+            ),
+            "rental_payback_years": (
+                round(rental_payback_years, 2)
+                if rental_payback_years is not None else None
+            ),
+        },
+
+        "projection": {
+            "holding_period_years": holding_period,
+            "annual_appreciation_assumption_percent": (
+                data.annual_appreciation_percent
+            ),
+            "projected_property_value": round(projected_value, 2),
+            "cumulative_net_rental_income": round(
+                cumulative_rental_income, 2
+            ),
+            "estimated_total_profit": round(
+                estimated_total_profit, 2
+            ),
+            "estimated_total_roi_percent": round(total_roi, 2),
+            "average_annual_roi_percent": round(
+                annualized_roi, 2
+            ),
+        },
+
+        "risk_assessment": {
+            "risk_score": risk_score,
+            "investment_score": investment_score,
+            "risk_level": risk_level,
+            "risk_factors": risk_factors,
+            "recommendation": recommendation,
+        },
+
+        "engine": "landestatex_explainable_investment_calculator",
+        "data_quality": "user_assumption_based_estimate",
+
+        "disclaimer": (
+            "These calculations are estimates based on the purchase price, "
+            "rent, expenses and appreciation assumptions supplied by the user. "
+            "Appreciation is an assumption, not an AI market forecast. "
+            "Calculations exclude taxes, loan interest, transaction costs, "
+            "vacancy periods and unexpected repairs. Actual returns may differ. "
+            "This is not financial or investment advice."
+        ),
+    }
+
+
+@router.post("/analyze/")
+def analyze_investment(request: InvestmentAnalysisRequest):
+    result = analyse_investment(request)
+
+    return {
+        "success": True,
+        "message": "Investment analysis generated successfully.",
+        "data": result,
+    }

@@ -1,0 +1,55 @@
+
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field, field_validator
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., min_length=1, max_length=2000)
+
+    @field_validator("content")
+    @classmethod
+    def clean_content(cls, value: str) -> str:
+        value = value.strip()
+
+        if not value:
+            raise ValueError("Message cannot be empty.")
+
+        return value
+
+
+class ChatbotRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+
+    conversation_history: list[ChatMessage] = Field(
+        default_factory=list,
+        max_length=20,
+    )
+
+    properties: list[dict[str, Any]] = Field(
+        default_factory=list,
+        max_length=100,
+    )
+
+    @field_validator("message")
+    @classmethod
+    def clean_message(cls, value: str) -> str:
+        value = value.strip()
+
+        if not value:
+            raise ValueError("Message cannot be empty.")
+
+        return value
+
+
+class ChatbotResponse(BaseModel):
+    success: bool = True
+    message: str
+    reply: str
+    suggested_questions: list[str] = Field(default_factory=list)
+    recommendations: list[dict[str, Any]] = Field(
+        default_factory=list
+    )
+    data_quality: str = "approved_listing_context"
+    engine: str = "rule_based_property_chatbot"

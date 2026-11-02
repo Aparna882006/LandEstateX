@@ -1,8 +1,8 @@
-
-import { Routes, Route } from 'react-router-dom';
+﻿import { Routes, Route } from 'react-router-dom';
 
 import LandingPage from '../pages/public/LandingPage';
 import PropertyListingPage from '../pages/public/PropertyListingPage';
+import AIToolsPage from '../pages/public/AIToolsPage';
 
 import PropertyDetailsPage from '../pages/buyer/PropertyDetailsPage';
 import WishlistPage from '../pages/buyer/WishlistPage';
@@ -11,6 +11,8 @@ import DashboardPage from '../pages/buyer/DashboardPage';
 import MyAppointmentsPage from '../pages/buyer/MyAppointmentsPage';
 import LoanCalculatorPage from '../pages/buyer/LoanCalculatorPage';
 import SavedSearchesPage from '../pages/buyer/SavedSearchesPage';
+import PricePredictionPage from '../pages/buyer/PricePredictionPage';
+import ImageValuationPage from '../pages/buyer/ImageValuationPage';
 
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
@@ -36,18 +38,23 @@ import AnalyticsPage from '../pages/admin/AnalyticsPage';
 import FraudDetectionPage from '../pages/admin/FraudDetectionPage';
 import SettingsPage from '../pages/admin/SettingsPage';
 
-import PricePredictionPage from '../pages/buyer/PricePredictionPage';
-
 const AppRoutes = () => {
   return (
     <Routes>
       {/* PUBLIC ROUTES */}
 
-      <Route path="/" element={<LandingPage />} />
+      <Route
+        path="/"
+        element={<LandingPage />}
+      />
 
       <Route
         path="/properties"
         element={<PropertyListingPage />}
+      />
+      <Route
+        path="/ai-tools"
+        element={<AIToolsPage />}
       />
 
       <Route
@@ -57,9 +64,15 @@ const AppRoutes = () => {
 
       {/* AUTH ROUTES */}
 
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={<LoginPage />}
+      />
 
-      <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/register"
+        element={<RegisterPage />}
+      />
 
       <Route
         path="/verify-email"
@@ -113,9 +126,16 @@ const AppRoutes = () => {
           />
         </Route>
 
+        {/* AI ROUTES */}
+
         <Route
-        path="/price-prediction"
-        element={<PricePredictionPage />}
+          path="/price-prediction"
+          element={<PricePredictionPage />}
+        />
+
+        <Route
+          path="/image-valuation"
+          element={<ImageValuationPage />}
         />
 
         {/* BROKER ROUTES */}

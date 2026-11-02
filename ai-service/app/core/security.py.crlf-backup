@@ -1,0 +1,31 @@
+
+import os
+import secrets
+
+from fastapi import Header, HTTPException, status
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def verify_internal_api_key(
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    expected_api_key = os.getenv("API_KEY")
+
+    if not expected_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service API key is not configured.",
+        )
+
+    if not x_api_key or not secrets.compare_digest(
+        x_api_key,
+        expected_api_key,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing internal API key.",
+        )
+
+    return True

@@ -1,0 +1,226 @@
+
+from typing import Any
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
+
+from app.core.security import verify_internal_api_key
+
+
+router = APIRouter(
+    prefix="/api/recommendations",
+    tags=["Recommendations"],
+    dependencies=[Depends(verify_internal_api_key)],
+)
+
+MAX_MATCH_POINTS = 90
+
+
+class RecommendationRequest(BaseModel):
+    preferences: list[dict[str, Any]] = Field(default_factory=list)
+    properties: list[dict[str, Any]] = Field(default_factory=list)
+
+
+def normalize(value: Any) -> str:
+    if value is None:
+        return ""
+
+    return str(value).strip().casefold()
+
+
+def number(value: Any) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+
+        return float(value)
+
+    except (TypeError, ValueError):
+        return None
+
+
+def score_property(
+    property_data: dict[str, Any],
+    preference: dict[str, Any],
+) -> tuple[float, list[str]]:
+    score = 0.0
+    reasons = []
+
+    filters = preference.get("filters") or {}
+
+    keyword = normalize(preference.get("keyword"))
+    city = normalize(property_data.get("city"))
+    locality = normalize(property_data.get("locality"))
+    address = normalize(property_data.get("address"))
+
+    # 1. Location matching: maximum 25 points
+    if keyword:
+        location_text = f"{city} {locality} {address}"
+
+        if keyword in location_text:
+            score += 25
+            reasons.append("Matches your preferred location")
+        else:
+            words = [
+                word for word in keyword.split()
+                if len(word) > 2
+            ]
+
+            if words and any(
+                word in location_text for word in words
+            ):
+                score += 12
+                reasons.append("Partially matches your location")
+
+    # 2. Property type: maximum 15 points
+    preferred_type = normalize(filters.get("property_type"))
+    actual_type = normalize(property_data.get("property_type"))
+
+    if preferred_type and preferred_type == actual_type:
+        score += 15
+        reasons.append("Matches your preferred property type")
+
+    # 3. Listing type: maximum 10 points
+    preferred_listing = normalize(filters.get("listing_type"))
+    actual_listing = normalize(property_data.get("listing_type"))
+
+    if preferred_listing and preferred_listing == actual_listing:
+        score += 10
+        reasons.append("Matches your preferred listing type")
+
+    # 4. Budget: maximum 20 points
+    price = number(property_data.get("price"))
+    min_price = number(filters.get("min_price"))
+    max_price = number(filters.get("max_price"))
+
+    if price is not None and (
+        min_price is not None or max_price is not None
+    ):
+        lower_ok = min_price is None or price >= min_price
+        upper_ok = max_price is None or price <= max_price
+
+        if lower_ok and upper_ok:
+            score += 20
+            reasons.append("Within your preferred budget")
+        else:
+            reference = max_price or min_price
+
+            if reference and reference > 0:
+                difference = abs(price - reference) / reference
+
+                if difference <= 0.10:
+                    score += 12
+                    reasons.append("Close to your preferred budget")
+                elif difference <= 0.20:
+                    score += 6
+                    reasons.append("Somewhat close to your budget")
+
+    # 5. Bedrooms: maximum 8 points
+    preferred_bedrooms = number(filters.get("bedrooms"))
+    actual_bedrooms = number(property_data.get("bedrooms"))
+
+    if (
+        preferred_bedrooms is not None
+        and actual_bedrooms is not None
+    ):
+        if actual_bedrooms >= preferred_bedrooms:
+            score += 8
+            reasons.append("Meets your bedroom requirement")
+
+    # 6. Area: maximum 7 points
+    area = number(property_data.get("area_sqft"))
+    min_area = number(filters.get("min_area"))
+    max_area = number(filters.get("max_area"))
+
+    if area is not None and (
+        min_area is not None or max_area is not None
+    ):
+        lower_ok = min_area is None or area >= min_area
+        upper_ok = max_area is None or area <= max_area
+
+        if lower_ok and upper_ok:
+            score += 7
+            reasons.append("Matches your preferred property area")
+
+    # 7. Amenities: maximum 5 points
+    preferred_amenities = filters.get("amenities") or []
+    actual_amenities = property_data.get("amenities") or []
+
+    if (
+        isinstance(preferred_amenities, list)
+        and preferred_amenities
+    ):
+        preferred_set = {
+            normalize(item) for item in preferred_amenities
+        }
+
+        actual_set = {
+            normalize(item) for item in actual_amenities
+        }
+
+        matched = preferred_set.intersection(actual_set)
+
+        if matched:
+            bonus = min(5, len(matched) * 2)
+            score += bonus
+            reasons.append("Includes some of your preferred amenities")
+
+    return min(round(score, 2), MAX_MATCH_POINTS), reasons
+
+
+@router.post("/")
+def recommend_properties(request: RecommendationRequest):
+    if not request.preferences or not request.properties:
+        return {
+            "success": True,
+            "message": "Saved searches or approved properties are not available yet.",
+            "recommendations": [],
+            "data_quality": "preference_based_ranking",
+            "engine": "rule_based_preference_scoring",
+        }
+
+    ranked = []
+
+    for property_data in request.properties:
+        property_id = str(property_data.get("id") or "")
+
+        if not property_id:
+            continue
+
+        best_score = 0.0
+        best_reasons = []
+
+        for preference in request.preferences:
+            current_score, current_reasons = score_property(
+                property_data,
+                preference,
+            )
+
+            if current_score > best_score:
+                best_score = current_score
+                best_reasons = current_reasons
+
+        if best_score > 0:
+            match_percentage = round(
+                (best_score / MAX_MATCH_POINTS) * 100,
+                2,
+            )
+
+            ranked.append({
+                "property_id": property_id,
+                "match_score": match_percentage,
+                "match_reasons": best_reasons,
+            })
+
+    ranked.sort(
+        key=lambda item: item["match_score"],
+        reverse=True,
+    )
+
+    return {
+        "success": True,
+        "message": "Property recommendations generated successfully.",
+        "recommendations": ranked[:10],
+        "data_quality": "preference_based_ranking",
+        "engine": "rule_based_preference_scoring",
+    }
