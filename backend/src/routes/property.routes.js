@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 
@@ -25,7 +26,7 @@ const { restrictTo } = require('../middlewares/role.middleware');
 const optionalAuth = require('../middlewares/optionalAuth.middleware');
 const upload = require('../middlewares/upload.middleware');
 
-// Specific routes BEFORE dynamic :property_id routes to avoid route-matching conflicts
+// Specific routes BEFORE dynamic :property_id routes
 router.get('/search', searchQueryValidator, validate, searchProperties);
 router.get('/my-properties', protect, getMyProperties);
 
@@ -45,6 +46,8 @@ router.put('/:property_id', protect, updatePropertyValidator, validate, updatePr
 router.delete('/:property_id', protect, deleteProperty);
 
 router.post('/:property_id/images', protect, upload.array('images', 20), addPropertyImages);
-router.delete('/:property_id/images/:image_id', protect, deletePropertyImage);
+
+// Delete image using Cloudinary public_id query parameter
+router.delete('/:property_id/images', protect, deletePropertyImage);
 
 module.exports = router;

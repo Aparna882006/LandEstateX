@@ -40,6 +40,7 @@ const STATUS_OPTIONS = [
 
 const MAX_IMAGES = 20;
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -362,8 +363,9 @@ const PropertyManagementPage = () => {
     }
   };
 
+  // DELETE PROPERTY IMAGE USING CLOUDINARY PUBLIC ID
   const handleRemoveImage = async (image) => {
-    if (!editingProperty || !image?._id) {
+    if (!editingProperty || !image?.public_id) {
       setError(
         "Could not identify this image. Refresh and try again."
       );
@@ -377,13 +379,13 @@ const PropertyManagementPage = () => {
     if (!confirmed) return;
 
     try {
-      setDeletingImageId(image._id);
+      setDeletingImageId(image.public_id);
       setError("");
       setSuccess("");
 
       await deletePropertyImage(
         editingProperty._id,
-        image._id
+        image.public_id
       );
 
       await refreshEditedProperty(editingProperty._id);
@@ -665,7 +667,10 @@ const PropertyManagementPage = () => {
               >
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="md:col-span-2">
-                    <label className={labelClass} htmlFor="property-title">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-title"
+                    >
                       Title
                     </label>
 
@@ -705,7 +710,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="property-type">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-type"
+                    >
                       Property Type
                     </label>
 
@@ -718,7 +726,10 @@ const PropertyManagementPage = () => {
                       className={`${inputClass} bg-white disabled:bg-neutral-100`}
                     >
                       {PROPERTY_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>
+                        <option
+                          key={type.value}
+                          value={type.value}
+                        >
                           {type.label}
                         </option>
                       ))}
@@ -726,7 +737,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="listing-type">
+                    <label
+                      className={labelClass}
+                      htmlFor="listing-type"
+                    >
                       Listing Type
                     </label>
 
@@ -739,7 +753,10 @@ const PropertyManagementPage = () => {
                       className={`${inputClass} bg-white disabled:bg-neutral-100`}
                     >
                       {LISTING_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>
+                        <option
+                          key={type.value}
+                          value={type.value}
+                        >
                           {type.label}
                         </option>
                       ))}
@@ -747,7 +764,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="property-price">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-price"
+                    >
                       Price (₹)
                     </label>
 
@@ -764,7 +784,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="property-area">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-area"
+                    >
                       Area (sq.ft.)
                     </label>
 
@@ -781,7 +804,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="property-bedrooms">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-bedrooms"
+                    >
                       Bedrooms
                     </label>
 
@@ -797,7 +823,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="property-bathrooms">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-bathrooms"
+                    >
                       Bathrooms
                     </label>
 
@@ -813,7 +842,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className={labelClass} htmlFor="property-address">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-address"
+                    >
                       Address
                     </label>
 
@@ -829,7 +861,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="property-city">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-city"
+                    >
                       City
                     </label>
 
@@ -845,7 +880,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="property-locality">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-locality"
+                    >
                       Locality
                     </label>
 
@@ -860,7 +898,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="property-latitude">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-latitude"
+                    >
                       Latitude
                     </label>
 
@@ -878,7 +919,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div>
-                    <label className={labelClass} htmlFor="property-longitude">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-longitude"
+                    >
                       Longitude
                     </label>
 
@@ -896,7 +940,10 @@ const PropertyManagementPage = () => {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className={labelClass} htmlFor="property-amenities">
+                    <label
+                      className={labelClass}
+                      htmlFor="property-amenities"
+                    >
                       Amenities
                     </label>
 
@@ -924,41 +971,45 @@ const PropertyManagementPage = () => {
 
                         {editingProperty.images?.length > 0 ? (
                           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            {editingProperty.images.map((image, index) => (
-                              <div
-                                key={image._id || image.public_id || index}
-                                className="overflow-hidden rounded-lg border border-neutral-200"
-                              >
-                                <img
-                                  src={image.url}
-                                  alt={`${editingProperty.title} image ${index + 1}`}
-                                  className="h-28 w-full object-cover"
-                                />
+                            {editingProperty.images.map(
+                              (image, index) => (
+                                <div
+                                  key={image.public_id || index}
+                                  className="overflow-hidden rounded-lg border border-neutral-200"
+                                >
+                                  <img
+                                    src={image.url}
+                                    alt={`${editingProperty.title} image ${index + 1}`}
+                                    className="h-28 w-full object-cover"
+                                  />
 
-                                <div className="flex items-center justify-between gap-2 p-2">
-                                  <span className="text-xs text-neutral-500">
-                                    {image.is_primary
-                                      ? "Primary image"
-                                      : `Image ${index + 1}`}
-                                  </span>
+                                  <div className="flex items-center justify-between gap-2 p-2">
+                                    <span className="text-xs text-neutral-500">
+                                      {image.is_primary
+                                        ? "Primary image"
+                                        : `Image ${index + 1}`}
+                                    </span>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveImage(image)}
-                                    disabled={
-                                      imageActionLoading ||
-                                      saving ||
-                                      deletingImageId === image._id
-                                    }
-                                    className="text-xs font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    {deletingImageId === image._id
-                                      ? "Removing..."
-                                      : "Remove"}
-                                  </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleRemoveImage(image)
+                                      }
+                                      disabled={
+                                        imageActionLoading ||
+                                        saving ||
+                                        deletingImageId === image.public_id
+                                      }
+                                      className="text-xs font-medium text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      {deletingImageId === image.public_id
+                                        ? "Removing..."
+                                        : "Remove"}
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              )
+                            )}
                           </div>
                         ) : (
                           <p className="text-sm text-neutral-500">
@@ -1007,7 +1058,9 @@ const PropertyManagementPage = () => {
                               key={`${image.name}-${image.lastModified}-${index}`}
                               className="flex items-center justify-between gap-3 text-sm text-neutral-600"
                             >
-                              <span className="truncate">{image.name}</span>
+                              <span className="truncate">
+                                {image.name}
+                              </span>
 
                               <span className="shrink-0 text-xs text-neutral-400">
                                 {(image.size / (1024 * 1024)).toFixed(2)} MB
@@ -1075,7 +1128,7 @@ const PropertyManagementPage = () => {
           </div>
         )}
       </div>
-    </DashboardLayout>                                 
+    </DashboardLayout>
   );
 };
 

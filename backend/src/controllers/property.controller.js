@@ -367,29 +367,68 @@ const addPropertyImages = asyncHandler(async (req, res) => {
 });
 
 // DELETE A PROPERTY IMAGE
-// DELETE /api/v1/properties/:property_id/images/:image_id
+// DELETE /api/v1/properties/:property_id/images?public_id=...
 const deletePropertyImage = asyncHandler(async (req, res) => {
-  const property = await Property.findById(req.params.property_id);
+  const { property_id } = req.params;
+  const { public_id } = req.query;
+
+  if (!public_id || typeof public_id !== 'string') {
+    throw new ApiError(400, 'Valid image public_id is required');
+  }
+
+  const property = await Property.findById(property_id);
 
   if (!property) {
     throw new ApiError(404, 'Property not found');
   }
 
   if (property.owner_id.toString() !== req.user.id) {
-    throw new ApiError(403, 'You do not have permission to modify this property');
+    throw new ApiError(
+      403,
+      'You do not have permission to modify this property'
+    );
   }
 
-  const image = property.images.id(req.params.image_id);
+  const imageIndex = property.images.findIndex(
+    (item) => item.public_id === public_id
+  );
 
-  if (!image) {
+  if (imageIndex === -1) {
     throw new ApiError(404, 'Image not found');
   }
 
-  await cloudinary.uploader.destroy(image.public_id);
-  image.deleteOne();
+  const wasPrimary = property.images[imageIndex].is_primary;
+
+  const cloudinaryResult = await cloudinary.uploader.destroy(public_id);
+
+  if (
+    cloudinaryResult.result !== 'ok' &&
+    cloudinaryResult.result !== 'not found'
+  ) {
+    throw new ApiError(502, 'Unable to remove image from Cloudinary');
+  }
+
+  property.images.splice(imageIndex, 1);
+
+  if (property.images.length > 0) {
+    const hasPrimary = property.images.some(
+      (item) => item.is_primary
+    );
+
+    if (wasPrimary || !hasPrimary) {
+      property.images.forEach((item, index) => {
+        item.is_primary = index === 0;
+      });
+    }
+  }
+
   await property.save();
 
-  return res.status(200).json(new ApiResponse(true, 'Image removed'));
+  return res.status(200).json(
+    new ApiResponse(true, 'Property image removed successfully', {
+      remaining_images: property.images.length,
+    })
+  );
 });
 
 module.exports = {

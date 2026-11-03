@@ -26,8 +26,11 @@ export const addPropertyImages = (id, formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
-export const deletePropertyImage = (propertyId, imageId) =>
-  api.delete(`/properties/${propertyId}/images/${imageId}`);
+// DELETE PROPERTY IMAGE
+export const deletePropertyImage = (propertyId, publicId) =>
+  api.delete(`/properties/${propertyId}/images`, {
+    params: { public_id: publicId },
+  });
 
 export const deleteProperty = (id) =>
   api.delete(`/properties/${id}`);
