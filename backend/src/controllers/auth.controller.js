@@ -14,6 +14,11 @@ const {
   generateRandomToken,
 } = require('../utils/jwt.util');
 
+const {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} = require('../services/email.service');
+
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -40,8 +45,8 @@ const register = asyncHandler(async (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+  const normalizedPhone = phone_number.trim();
 
-  // Validate role
   const allowedRoles = ['buyer', 'broker'];
 
   if (!role || !allowedRoles.includes(role)) {
@@ -51,7 +56,7 @@ const register = asyncHandler(async (req, res) => {
   const existingUser = await User.findOne({
     $or: [
       { email: normalizedEmail },
-      { phone_number: phone_number.trim() },
+      { phone_number: normalizedPhone },
     ],
   });
 
@@ -62,47 +67,73 @@ const register = asyncHandler(async (req, res) => {
     );
   }
 
+  // Generate a six-digit OTP.
   const otp = generateOTP();
+
+  // Store only the hashed OTP in MongoDB.
+  const hashedOtp = hashToken(otp);
+
+  // OTP expires after 10 minutes.
   const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-  // Create user account
   const user = await User.create({
     full_name: full_name.trim(),
     email: normalizedEmail,
-    phone_number: phone_number.trim(),
+    phone_number: normalizedPhone,
     password,
     role,
-    email_verification_otp: otp,
+    email_verification_otp: hashedOtp,
     email_verification_expires: otpExpiry,
   });
 
-  // Create broker profile linked to the User account
-  if (user.role === 'broker') {
-    try {
+  // Create broker profile if the selected role is broker.
+  let brokerCreated = false;
+
+  try {
+    if (user.role === 'broker') {
       await Broker.create({
         user_id: user._id,
       });
-    } catch (error) {
-      // Roll back the User if profile creation fails
-      await User.findByIdAndDelete(user._id);
-      throw error;
-    }
-  }
 
-  // Development OTP logging
-  console.log('\n========================================');
-  console.log('LAND ESTATE X EMAIL VERIFICATION OTP');
-  console.log('========================================');
-  console.log('Email:', user.email);
-  console.log('Name:', user.full_name);
-  console.log('OTP:', otp);
-  console.log('Valid for: 10 minutes');
-  console.log('========================================\n');
+      brokerCreated = true;
+    }
+
+    // Send verification OTP to the registered Gmail/email address.
+    await sendVerificationEmail({
+      to: user.email,
+      name: user.full_name,
+      otp,
+    });
+  } catch (error) {
+    // Remove incomplete registration if broker creation or email fails.
+    try {
+      if (brokerCreated) {
+        await Broker.deleteOne({ user_id: user._id });
+      }
+
+      await User.findByIdAndDelete(user._id);
+    } catch (cleanupError) {
+      console.error(
+        '[REGISTER] Cleanup failed:',
+        cleanupError.message
+      );
+    }
+
+    console.error(
+      '[REGISTER] Registration email delivery failed:',
+      error.message
+    );
+
+    throw new ApiError(
+      503,
+      'Unable to send verification email. Please try registering again.'
+    );
+  }
 
   return res.status(201).json(
     new ApiResponse(
       true,
-      'Account created. Verification OTP has been generated.',
+      'Account created. Verification OTP has been sent to your email.',
       {
         user_id: user._id,
         email: user.email,
@@ -123,6 +154,11 @@ const verifyEmail = asyncHandler(async (req, res) => {
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+  const normalizedOtp = String(otp).trim();
+
+  if (!/^\d{6}$/.test(normalizedOtp)) {
+    throw new ApiError(400, 'Please enter a valid six-digit OTP');
+  }
 
   const user = await User.findOne({
     email: normalizedEmail,
@@ -136,9 +172,19 @@ const verifyEmail = asyncHandler(async (req, res) => {
     throw new ApiError(409, 'Email already verified');
   }
 
+  const storedOtp = user.email_verification_otp;
+
+  // Accept hashed OTPs and temporarily support old plaintext
+  // OTPs created before this update.
+  const isOtpValid =
+    storedOtp &&
+    (
+      storedOtp === hashToken(normalizedOtp) ||
+      storedOtp === normalizedOtp
+    );
+
   if (
-    !user.email_verification_otp ||
-    user.email_verification_otp !== otp ||
+    !isOtpValid ||
     !user.email_verification_expires ||
     user.email_verification_expires < new Date()
   ) {
@@ -323,7 +369,9 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  const user = await User.findOne({ email: normalizedEmail });
+  const user = await User.findOne({
+    email: normalizedEmail,
+  });
 
   if (user) {
     const resetToken = generateRandomToken();
@@ -335,8 +383,28 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
     await user.save();
 
-    // Development only
-    console.log('[DEV ONLY] Password reset token:', resetToken);
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.full_name,
+        resetToken,
+      });
+    } catch (error) {
+      user.password_reset_token = undefined;
+      user.password_reset_expires = undefined;
+
+      await user.save();
+
+      console.error(
+        '[FORGOT PASSWORD] Email delivery failed:',
+        error.message
+      );
+
+      throw new ApiError(
+        503,
+        'Unable to send password reset email. Please try again later.'
+      );
+    }
   }
 
   return res.status(200).json(
