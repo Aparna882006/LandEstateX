@@ -36,16 +36,16 @@ async function callAIService(
 
   let response;
 
+  const serviceUrl =
+    `${AI_SERVICE_URL.replace(/\/+$/, '')}${path}`;
+
   try {
-    response = await fetch(
-      `${AI_SERVICE_URL.replace(/\/+$/, '')}${path}`,
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(timeout),
-      }
-    );
+    response = await fetch(serviceUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(timeout),
+    });
   } catch (error) {
     console.error(
       `[AI Gateway] Request failed for ${path}:`,
@@ -62,9 +62,31 @@ async function callAIService(
     throw serviceError;
   }
 
-  const result = await response.json().catch(() => null);
+  // Read response body as text for better diagnostics.
+  const responseText = await response.text();
 
+  let result = null;
+
+  try {
+    result = responseText
+      ? JSON.parse(responseText)
+      : null;
+  } catch {
+    result = null;
+  }
+
+  // ---------------------------------------------
+  // AI SERVICE ERROR LOGGING
+  // ---------------------------------------------
   if (!response.ok) {
+    console.error(`[AI Gateway] Failed URL: ${serviceUrl}`);
+    console.error(
+      `[AI Gateway] HTTP Status: ${response.status}`
+    );
+    console.error(
+      `[AI Gateway] Response Body: ${responseText.slice(0, 1000)}`
+    );
+
     const detail = result?.detail ?? result?.message;
 
     const errorMessage =
@@ -74,18 +96,24 @@ async function callAIService(
           ? JSON.stringify(detail)
           : fallbackMessage;
 
-    console.error(
-      `[AI Gateway] ${path} returned HTTP ${response.status}:`,
-      errorMessage
-    );
-
     const serviceError = new Error(errorMessage);
 
     serviceError.statusCode = 502;
     throw serviceError;
   }
 
+  // ---------------------------------------------
+  // INVALID RESPONSE CHECK
+  // ---------------------------------------------
   if (!result || typeof result !== 'object') {
+    console.error(
+      `[AI Gateway] Invalid response from ${serviceUrl}`
+    );
+
+    console.error(
+      `[AI Gateway] Response Body: ${responseText.slice(0, 1000)}`
+    );
+
     const serviceError = new Error(
       'AI service returned an invalid response.'
     );
