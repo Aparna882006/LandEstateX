@@ -1,3 +1,4 @@
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -10,6 +11,9 @@ const errorMiddleware = require('./middlewares/error.middleware');
 const notFoundMiddleware = require('./middlewares/notFound.middleware');
 
 const app = express();
+
+// Trust Render's reverse proxy
+app.set('trust proxy', 1);
 
 // Security headers
 app.use(helmet());
@@ -45,7 +49,10 @@ app.use('/api/v1/auth', authLimiter);
 
 // Health check
 app.get('/', (req, res) => {
-  res.status(200).json({ success: true, message: 'LandEstateX backend is running' });
+  res.status(200).json({
+    success: true,
+    message: 'LandEstateX backend is running',
+  });
 });
 
 // Main API routes
